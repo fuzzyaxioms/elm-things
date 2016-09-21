@@ -9,6 +9,7 @@ import Date exposing (Date)
 import Task
 import String
 import AnimationFrame
+import Random.Pcg as Random
 
 
 main =
@@ -38,8 +39,8 @@ type alias Model =
 
 init : (Model, Cmd Msg)
 init =
-  ( { canvasHeight=400
-     , canvasWidth=400
+  ( { canvasHeight=600
+     , canvasWidth=600
      , ballRadius=10
      , ballX=200
      , ballY=100
@@ -49,13 +50,19 @@ init =
      , numMS = 0
      , fps = 0
      }
-  , Cmd.none)
+  , (Random.list 2 (Random.int 0 600) ) |> Random.generate (\rs ->
+      case rs of
+          [x,y] -> Teleport x  y
+          _ -> Debug.crash "impossible"
+      )
+  )
 
 
 -- UPDATE
 
 type Msg
   = Step Time
+  | Teleport Int Int
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -76,6 +83,9 @@ update msg model =
       ({model | ballX = newX2, ballY = newY2, ballVelocityX = newVelX, ballVelocityY = newVelY, numFrames=newNumFrames2, numMS=newNumMS2, fps=newFPS},
       Cmd.none)
 
+    Teleport x y ->
+        ({model | ballX = x, ballY = y}, Cmd.none)
+
 
 -- SUBSCRIPTIONS
 
@@ -89,8 +99,10 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
     Html.div [] [
-        svg [ viewBox "0 0 400 400", width "400px" ]
-          [ circle [ cx (toString model.ballX), cy (toString model.ballY), r (toString model.ballRadius), fill "#0B79CE" ] []
+        svg [ width (toString model.canvasWidth), height (toString model.canvasHeight) ]
+          [
+              rect [ x "0", y "0", width (toString model.canvasWidth), height (toString model.canvasHeight)] []
+              , circle [ cx (toString model.ballX), cy (toString model.ballY), r (toString model.ballRadius), fill "#0B79CE" ] []
           ]
       , Html.hr [] []
       , Html.text  (toString model.fps)
