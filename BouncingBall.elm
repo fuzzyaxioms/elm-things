@@ -23,14 +23,18 @@ main =
 
 -- MODEL
 
+type alias Ball =
+    { x : Float
+    , y : Float
+    , dx : Float
+    , dy : Float
+    , r : Float  
+    }
+
 type alias Model =
     { canvasHeight : Int
     , canvasWidth : Int
-    , ballRadius : Int
-    , ballX : Int
-    , ballY : Int
-    , ballVelocityX : Int
-    , ballVelocityY : Int
+    , ball : Ball
     , numFrames : Int
     , numMS : Time
     , fps : Float
@@ -41,18 +45,19 @@ init : (Model, Cmd Msg)
 init =
   ( { canvasHeight=600
      , canvasWidth=600
-     , ballRadius=10
-     , ballX=200
-     , ballY=100
-     , ballVelocityX=10
-     , ballVelocityY=10
+     , ball = { r=10
+              , x=200
+              , y=100
+              , dx=10
+              , dy=10
+     }
      , numFrames = 0
      , numMS = 0
      , fps = 0
      }
   , (Random.list 2 (Random.int 0 600) ) |> Random.generate (\rs ->
       case rs of
-          [x,y] -> Teleport x  y
+          [x,y] -> Teleport (toFloat x)  (toFloat y)
           _ -> Debug.crash "impossible"
       )
   )
@@ -62,29 +67,42 @@ init =
 
 type Msg
   = Step Time
-  | Teleport Int Int
+  | Teleport Float Float
 
+
+updateBall : Ball -> Int -> Int -> Ball
+updateBall b w_ h_ =
+    let
+        w = toFloat w_
+        h = toFloat h_
+        x2 = b.x + b.dx
+        y2 = b.y + b.dy
+        dx2 = if x2 <= b.r || x2 + b.r >= w then -b.dx else b.dx
+        dy2 = if y2 <= b.r || y2 + b.r >= h then -b.dy else b.dy
+        x3 = clamp b.r (w - b.r) x2
+        y3 = clamp b.r (h - b.r) y2
+    in
+    {b | x = x3, y = y3, dx = dx2, dy = dy2}
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     Step diff ->
         let
-            newX = model.ballX + model.ballVelocityX
-            newY = model.ballY + model.ballVelocityY
-            newVelX = if newX <= model.ballRadius || newX + model.ballRadius >= model.canvasWidth then -model.ballVelocityX else model.ballVelocityX
-            newVelY = if newY <= model.ballRadius || newY + model.ballRadius >= model.canvasHeight then -model.ballVelocityY else model.ballVelocityY
-            newX2 = clamp model.ballRadius (model.canvasWidth - model.ballRadius) newX
-            newY2 = clamp model.ballRadius (model.canvasHeight - model.ballRadius) newY
+            
             newNumFrames = model.numFrames + 1
             newNumMS = model.numMS + diff
             (newNumFrames2, newNumMS2, newFPS) = if Time.inSeconds newNumMS >= 1.0 then (0,0, newNumFrames / Time.inSeconds newNumMS) else (newNumFrames, newNumMS, model.fps)
         in
-      ({model | ballX = newX2, ballY = newY2, ballVelocityX = newVelX, ballVelocityY = newVelY, numFrames=newNumFrames2, numMS=newNumMS2, fps=newFPS},
+      ({model | ball = updateBall model.ball model.canvasWidth model.canvasHeight, numFrames=newNumFrames2, numMS=newNumMS2, fps=newFPS},
       Cmd.none)
 
     Teleport x y ->
-        ({model | ballX = x, ballY = y}, Cmd.none)
+        let
+            b = model.ball
+            newBall = {b | x = x, y = y}
+        in
+        ({model | ball = newBall}, Cmd.none)
 
 
 -- SUBSCRIPTIONS
@@ -102,7 +120,7 @@ view model =
         svg [ width (toString model.canvasWidth), height (toString model.canvasHeight) ]
           [
               rect [ x "0", y "0", width (toString model.canvasWidth), height (toString model.canvasHeight)] []
-              , circle [ cx (toString model.ballX), cy (toString model.ballY), r (toString model.ballRadius), fill "#0B79CE" ] []
+              , circle [ cx (toString model.ball.x), cy (toString model.ball.y), r (toString model.ball.r), fill "#0B79CE" ] []
           ]
       , Html.hr [] []
       , Html.text  (toString model.fps)
