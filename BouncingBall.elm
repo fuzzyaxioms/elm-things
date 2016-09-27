@@ -34,44 +34,44 @@ type alias Ball =
 type alias Model =
     { canvasHeight : Int
     , canvasWidth : Int
-    , ball : Ball
+    , balls : List Ball
     , numFrames : Int
     , numMS : Time
     , fps : Float
     }
 
+randBall w h =
+    let 
+        randR = Random.map toFloat <| Random.int 4 50
+        randX = Random.map toFloat <| Random.int 0 w 
+        randY = Random.map toFloat <| Random.int 0 h 
+        randDx = Random.map toFloat <| Random.int 4 20
+        randDy = Random.map toFloat <| Random.int 4 20
+    in
+    Random.map5 (\r x y dx dy -> {x=x, y=y, dx=dx, dy=dy, r=r}) randR randX randY randDx randDy
 
 init : (Model, Cmd Msg)
 init =
   ( { canvasHeight=600
      , canvasWidth=600
-     , ball = { r=10
-              , x=200
-              , y=100
-              , dx=10
-              , dy=10
-     }
+     , balls = []
      , numFrames = 0
      , numMS = 0
      , fps = 0
      }
-  , (Random.list 2 (Random.int 0 600) ) |> Random.generate (\rs ->
-      case rs of
-          [x,y] -> Teleport (toFloat x)  (toFloat y)
-          _ -> Debug.crash "impossible"
-      )
+  , (Random.list 20 (randBall 600 600) ) |> Random.generate Construct
   )
 
 
 -- UPDATE
 
 type Msg
-  = Step Time
-  | Teleport Float Float
+  = Construct (List Ball)
+  | Step Time
 
 
-updateBall : Ball -> Int -> Int -> Ball
-updateBall b w_ h_ =
+updateBall : Int -> Int -> Ball -> Ball
+updateBall w_ h_ b =
     let
         w = toFloat w_
         h = toFloat h_
@@ -84,25 +84,24 @@ updateBall b w_ h_ =
     in
     {b | x = x3, y = y3, dx = dx2, dy = dy2}
 
+teleportBall : Ball -> Float -> Float -> Ball
+teleportBall b x y =
+    {b | x = x, y = y}
+
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
+    Construct balls ->
+        ({model | balls = balls}, Cmd.none)
+
     Step diff ->
         let
-            
             newNumFrames = model.numFrames + 1
             newNumMS = model.numMS + diff
             (newNumFrames2, newNumMS2, newFPS) = if Time.inSeconds newNumMS >= 1.0 then (0,0, newNumFrames / Time.inSeconds newNumMS) else (newNumFrames, newNumMS, model.fps)
         in
-      ({model | ball = updateBall model.ball model.canvasWidth model.canvasHeight, numFrames=newNumFrames2, numMS=newNumMS2, fps=newFPS},
+      ({model | balls = List.map (updateBall model.canvasWidth model.canvasHeight) model.balls, numFrames=newNumFrames2, numMS=newNumMS2, fps=newFPS},
       Cmd.none)
-
-    Teleport x y ->
-        let
-            b = model.ball
-            newBall = {b | x = x, y = y}
-        in
-        ({model | ball = newBall}, Cmd.none)
 
 
 -- SUBSCRIPTIONS
@@ -114,14 +113,17 @@ subscriptions model =
 
 -- VIEW
 
+viewBall : Ball -> Svg Msg
+viewBall b =
+    circle [ cx (toString b.x), cy (toString b.y), r (toString b.r), fill "#0B79CE" ] []
+
 view : Model -> Html Msg
 view model =
     Html.div [] [
         svg [ width (toString model.canvasWidth), height (toString model.canvasHeight) ]
-          [
+          ([
               rect [ x "0", y "0", width (toString model.canvasWidth), height (toString model.canvasHeight)] []
-              , circle [ cx (toString model.ball.x), cy (toString model.ball.y), r (toString model.ball.r), fill "#0B79CE" ] []
-          ]
+          ] ++ List.map viewBall model.balls)
       , Html.hr [] []
       , Html.text  (toString model.fps)
       ]
