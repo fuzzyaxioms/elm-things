@@ -5,7 +5,6 @@ import Html.App as App
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Time exposing (Time)
-import Date exposing (Date)
 import Task
 import String
 import AnimationFrame
@@ -26,8 +25,8 @@ main =
 type alias Ball =
     { x : Float
     , y : Float
-    , dx : Float
-    , dy : Float
+    , dx : Float -- pixels per second
+    , dy : Float -- pixels per second
     , r : Float  
     }
 
@@ -42,11 +41,11 @@ type alias Model =
 
 randBall w h =
     let 
-        randR = Random.map toFloat <| Random.int 4 50
+        randR = Random.map toFloat <| Random.int 5 50
         randX = Random.map toFloat <| Random.int 0 w 
         randY = Random.map toFloat <| Random.int 0 h 
-        randDx = Random.map toFloat <| Random.int 4 20
-        randDy = Random.map toFloat <| Random.int 4 20
+        randDx = Random.map toFloat <| Random.int 5 200
+        randDy = Random.map toFloat <| Random.int 5 200
     in
     Random.map5 (\r x y dx dy -> {x=x, y=y, dx=dx, dy=dy, r=r}) randR randX randY randDx randDy
 
@@ -70,13 +69,13 @@ type Msg
   | Step Time
 
 
-updateBall : Int -> Int -> Ball -> Ball
-updateBall w_ h_ b =
+updateBall : Int -> Int -> Time -> Ball -> Ball
+updateBall w_ h_ dt b =
     let
         w = toFloat w_
         h = toFloat h_
-        x2 = b.x + b.dx
-        y2 = b.y + b.dy
+        x2 = b.x + b.dx * Time.inSeconds dt
+        y2 = b.y + b.dy * Time.inSeconds dt
         dx2 = if x2 <= b.r || x2 + b.r >= w then -b.dx else b.dx
         dy2 = if y2 <= b.r || y2 + b.r >= h then -b.dy else b.dy
         x3 = clamp b.r (w - b.r) x2
@@ -100,7 +99,7 @@ update msg model =
             newNumMS = model.numMS + diff
             (newNumFrames2, newNumMS2, newFPS) = if Time.inSeconds newNumMS >= 1.0 then (0,0, newNumFrames / Time.inSeconds newNumMS) else (newNumFrames, newNumMS, model.fps)
         in
-      ({model | balls = List.map (updateBall model.canvasWidth model.canvasHeight) model.balls, numFrames=newNumFrames2, numMS=newNumMS2, fps=newFPS},
+      ({model | balls = List.map (updateBall model.canvasWidth model.canvasHeight diff) model.balls, numFrames=newNumFrames2, numMS=newNumMS2, fps=newFPS},
       Cmd.none)
 
 
