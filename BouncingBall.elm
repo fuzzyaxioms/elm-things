@@ -7,6 +7,7 @@ import Svg.Attributes exposing (..)
 import Time exposing (Time)
 import Task
 import Color exposing (Color)
+import Math.Vector2 exposing (..)
 import String
 import AnimationFrame
 import Random.Pcg as Random
