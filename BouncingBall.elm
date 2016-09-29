@@ -128,7 +128,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-  AnimationFrame.diffs Step
+  AnimationFrame.diffs (Step << clamp 0.0 100.0)
 
 
 -- VIEW
