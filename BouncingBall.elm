@@ -6,6 +6,7 @@ import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Time exposing (Time)
 import Task
+import Color exposing (Color)
 import String
 import AnimationFrame
 import Random.Pcg as Random
@@ -27,7 +28,8 @@ type alias Ball =
     , y : Float
     , dx : Float -- pixels per second
     , dy : Float -- pixels per second
-    , r : Float  
+    , r : Float
+    , clr : Color
     }
 
 type alias Model =
@@ -39,15 +41,34 @@ type alias Model =
     , fps : Float
     }
 
+newBall r x y dx dy clr = {x=x, y=y, dx=dx, dy=dy, r=r, clr=clr}
+
+randColor =
+    let
+        r1 = Random.int 0 255
+        r2 = Random.int 0 255
+        r3 = Random.int 0 255
+    in
+    Random.map3 Color.rgb r1 r2 r3
+
+colorToHTML clr =
+    let
+        clrRec = Color.toRgb clr
+        r = .red clrRec
+        g = .green clrRec
+        b = .blue clrRec
+    in
+    "rgb" ++ toString (r,g,b)
+
 randBall w h =
-    let 
+    let
         randR = Random.map toFloat <| Random.int 5 50
-        randX = Random.map toFloat <| Random.int 0 w 
-        randY = Random.map toFloat <| Random.int 0 h 
+        randX = Random.map toFloat <| Random.int 0 w
+        randY = Random.map toFloat <| Random.int 0 h
         randDx = Random.map toFloat <| Random.int 5 200
         randDy = Random.map toFloat <| Random.int 5 200
     in
-    Random.map5 (\r x y dx dy -> {x=x, y=y, dx=dx, dy=dy, r=r}) randR randX randY randDx randDy
+    newBall `Random.map` randR `Random.andMap` randX `Random.andMap` randY `Random.andMap` randDx `Random.andMap` randDy `Random.andMap` randColor
 
 init : (Model, Cmd Msg)
 init =
@@ -114,7 +135,7 @@ subscriptions model =
 
 viewBall : Ball -> Svg Msg
 viewBall b =
-    circle [ cx (toString b.x), cy (toString b.y), r (toString b.r), fill "#0B79CE" ] []
+    circle [ cx (toString b.x), cy (toString b.y), r (toString b.r), fill <| colorToHTML b.clr ] []
 
 view : Model -> Html Msg
 view model =
