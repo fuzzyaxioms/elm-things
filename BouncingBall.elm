@@ -2,8 +2,6 @@ module BouncingBall exposing (main)
 
 import Html exposing (Html)
 import Html.App as App
-import Svg exposing (..)
-import Svg.Attributes exposing (..)
 import Time exposing (Time)
 import Task
 import Color exposing (Color)
@@ -12,7 +10,13 @@ import String
 import AnimationFrame
 import Random.Pcg as Random
 
+import Collage exposing (Form)
+import Element
+import Text
+import Transform
 
+
+main : Program Never
 main =
   App.program
     { init = init
@@ -134,17 +138,19 @@ subscriptions model =
 
 -- VIEW
 
-viewBall : Ball -> Svg Msg
+viewBall : Ball -> Form
 viewBall b =
-    circle [ cx (toString b.x), cy (toString b.y), r (toString b.r), fill <| colorToHTML b.clr ] []
+    Collage.move (b.x, b.y) <| Collage.filled b.clr <| Collage.circle b.r
+
+viewFPS : Float -> Form
+viewFPS fps =
+    Collage.move (300, 300) <| Collage.text <| Text.color Color.white <| Text.fromString <| toString fps
 
 view : Model -> Html Msg
 view model =
-    Html.div [] [
-        svg [ width (toString model.canvasWidth), height (toString model.canvasHeight) ]
-          ([
-              rect [ x "0", y "0", width (toString model.canvasWidth), height (toString model.canvasHeight)] []
-          ] ++ List.map viewBall model.balls)
-      , Html.hr [] []
-      , Html.text  (toString model.fps)
-      ]
+    let
+        repos = Transform.translation (-(toFloat model.canvasWidth)/2) (-(toFloat model.canvasHeight)/2)
+        background = Collage.filled Color.black <| Collage.rect (toFloat model.canvasWidth) (toFloat model.canvasHeight)
+        forms = Collage.groupTransform repos <| [viewFPS model.fps] ++ List.map viewBall model.balls
+    in
+    Element.toHtml <| Collage.collage model.canvasWidth model.canvasHeight [background,forms]
