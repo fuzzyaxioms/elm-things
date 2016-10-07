@@ -1,6 +1,6 @@
 {
   "name": "Elm-things",
   "tagline": "Trying out Elm",
-  "body": "# Projects\r\n\r\n## BouncingBall\r\n- [Demo](projects/bball.html)\r\n- [Source](projects/BouncingBall.elm)\r\n",
+  "body": "# Projects\r\n\r\n## BouncingBall\r\n- [Demo](projects/bball.html)\r\n- [Source](https://github.com/fuzzyaxioms/elm-things/blob/master/projects/BouncingBall.elm)\r\n",
   "note": "Don't delete this file! It's used internally to help with page regeneration."
 }
