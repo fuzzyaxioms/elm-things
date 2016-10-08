@@ -2,7 +2,8 @@ module BouncingBall exposing (main)
 
 import Html exposing (Html)
 import Html.App as App
-import Html.Events exposing (onClick,onInput)
+import Html.Events exposing (onSubmit,onInput,onClick)
+import Html.Attributes as Attr
 import Time exposing (Time)
 import Task
 import Color exposing (Color)
@@ -181,8 +182,8 @@ view model =
     let
         canvas = viewCanvas model
         fps = viewFPS <| getFPS model.fpsCounter
-        resetButton = Html.button [onClick Generate] [Html.text "Generate"]
         inputNum = Html.input [onInput (UpdateNum << Result.withDefault 20 << String.toInt)] []
+        resetButton = Html.button [onClick Generate] [Html.text "Generate"]
     in
     Html.body [] [
         canvas
