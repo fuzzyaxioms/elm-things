@@ -8,7 +8,7 @@ import Color exposing (Color)
 import Math.Vector2 exposing (..)
 import String
 import AnimationFrame
-import Random.Pcg as Random
+import Random.Pcg as Random exposing (Generator, Seed)
 
 import Collage exposing (Form)
 import Element
@@ -37,17 +37,10 @@ type alias Ball =
     , clr : Color
     }
 
-type alias Model =
-    { canvasHeight : Int
-    , canvasWidth : Int
-    , balls : List Ball
-    , numFrames : Int
-    , numMS : Time
-    , fps : Float
-    }
-
+newBall : Float -> Float -> Float -> Float -> Float -> Color -> Ball
 newBall r x y dx dy clr = {x=x, y=y, dx=dx, dy=dy, r=r, clr=clr}
 
+randColor : Generator Color
 randColor =
     let
         r1 = Random.int 0 255
@@ -56,15 +49,7 @@ randColor =
     in
     Random.map3 Color.rgb r1 r2 r3
 
-colorToHTML clr =
-    let
-        clrRec = Color.toRgb clr
-        r = .red clrRec
-        g = .green clrRec
-        b = .blue clrRec
-    in
-    "rgb" ++ toString (r,g,b)
-
+randBall : Int -> Int -> Generator Ball
 randBall w h =
     let
         randR = Random.map toFloat <| Random.int 5 50
@@ -75,14 +60,38 @@ randBall w h =
     in
     newBall `Random.map` randR `Random.andMap` randX `Random.andMap` randY `Random.andMap` randDx `Random.andMap` randDy `Random.andMap` randColor
 
+
+type alias FPSCounter = { fps : Float }
+
+newFPSCounter : FPSCounter
+newFPSCounter = {fps=0.0}
+
+getFPS : FPSCounter -> Float
+getFPS = .fps
+
+-- use exponential decay, but weighted with longer incoming diffs
+updateFPSCounter : FPSCounter -> Time -> FPSCounter
+updateFPSCounter {fps} diff =
+    let
+        s = Time.inSeconds diff + 0.0000001 -- avoid division by zero
+        w = 1.0 / (1.0 + e^(-s))
+    in
+    {fps = (1.0-w)*fps + w * (1.0 / s)}
+
+type alias Model =
+    { canvasHeight : Int
+    , canvasWidth : Int
+    , balls : List Ball
+    , fpsCounter : FPSCounter
+    }
+
+
 init : (Model, Cmd Msg)
 init =
   ( { canvasHeight=600
      , canvasWidth=600
      , balls = []
-     , numFrames = 0
-     , numMS = 0
-     , fps = 0
+     , fpsCounter = newFPSCounter
      }
   , (Random.list 20 (randBall 600 600) ) |> Random.generate Construct
   )
@@ -120,12 +129,9 @@ update msg model =
         ({model | balls = balls}, Cmd.none)
 
     Step diff ->
-        let
-            newNumFrames = model.numFrames + 1
-            newNumMS = model.numMS + diff
-            (newNumFrames2, newNumMS2, newFPS) = if Time.inSeconds newNumMS >= 1.0 then (0,0, newNumFrames / Time.inSeconds newNumMS) else (newNumFrames, newNumMS, model.fps)
-        in
-      ({model | balls = List.map (updateBall model.canvasWidth model.canvasHeight diff) model.balls, numFrames=newNumFrames2, numMS=newNumMS2, fps=newFPS},
+      ({model | balls =
+        List.map (updateBall model.canvasWidth model.canvasHeight diff) model.balls,
+        fpsCounter = updateFPSCounter model.fpsCounter diff},
       Cmd.none)
 
 
@@ -144,13 +150,13 @@ viewBall b =
 
 viewFPS : Float -> Form
 viewFPS fps =
-    Collage.move (300, 300) <| Collage.text <| Text.color Color.white <| Text.fromString <| toString fps
+    Collage.move (300, 300) <| Collage.text <| Text.color Color.white <| Text.fromString <| (++) "FPS: " <| toString <| round fps
 
 view : Model -> Html Msg
 view model =
     let
         repos = Transform.translation (-(toFloat model.canvasWidth)/2) (-(toFloat model.canvasHeight)/2)
         background = Collage.filled Color.black <| Collage.rect (toFloat model.canvasWidth) (toFloat model.canvasHeight)
-        forms = Collage.groupTransform repos <| [viewFPS model.fps] ++ List.map viewBall model.balls
+        forms = Collage.groupTransform repos <| [viewFPS <| getFPS model.fpsCounter] ++ List.map viewBall model.balls
     in
     Element.toHtml <| Collage.collage model.canvasWidth model.canvasHeight [background,forms]
