@@ -2,6 +2,7 @@ module BouncingBall exposing (main)
 
 import Html exposing (Html)
 import Html.App as App
+import Html.Attributes as Attr
 import Time exposing (Time)
 import Task
 import Color exposing (Color)
@@ -11,8 +12,8 @@ import AnimationFrame
 import Random.Pcg as Random exposing (Generator, Seed)
 
 import Collage exposing (Form)
-import Element
-import Text
+import Element exposing (Element)
+import Text exposing (Text)
 import Transform
 
 
@@ -148,15 +149,30 @@ viewBall : Ball -> Form
 viewBall b =
     Collage.move (b.x, b.y) <| Collage.filled b.clr <| Collage.circle b.r
 
-viewFPS : Float -> Form
+viewFPS : Float -> Html Msg
 viewFPS fps =
-    Collage.move (300, 300) <| Collage.text <| Text.color Color.white <| Text.fromString <| (++) "FPS: " <| toString <| round fps
+    let 
+        n = round (fps * 100)
+        a = toString (n // 100)
+        b = String.padLeft 2 '0' <| toString (n % 100) 
+    in
+    Html.text <| "FPS: " ++ a ++ "." ++ b 
+
+viewCanvas : Model -> Html Msg
+viewCanvas model =
+    let
+        repos = Transform.translation (-(toFloat model.canvasWidth)/2) (-(toFloat model.canvasHeight)/2)
+        background = Collage.filled Color.black <| Collage.rect (toFloat model.canvasWidth) (toFloat model.canvasHeight)
+        forms = Collage.groupTransform repos <| List.map viewBall model.balls
+    in
+    Element.toHtml <| Collage.collage model.canvasWidth model.canvasHeight [background,forms]
 
 view : Model -> Html Msg
 view model =
     let
-        repos = Transform.translation (-(toFloat model.canvasWidth)/2) (-(toFloat model.canvasHeight)/2)
-        background = Collage.filled Color.black <| Collage.rect (toFloat model.canvasWidth) (toFloat model.canvasHeight)
-        forms = Collage.groupTransform repos <| [viewFPS <| getFPS model.fpsCounter] ++ List.map viewBall model.balls
+        canvas = viewCanvas model
+        fps = viewFPS <| getFPS model.fpsCounter
+        resetButton = Html.button [] [Html.text "Generate"]
+        inputNum = Html.input [] []
     in
-    Element.toHtml <| Collage.collage model.canvasWidth model.canvasHeight [background,forms]
+    Html.body [] [canvas, Html.hr [] [], Html.p [] [fps], Html.p [] [resetButton, inputNum]] 
