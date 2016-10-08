@@ -2,7 +2,7 @@ module BouncingBall exposing (main)
 
 import Html exposing (Html)
 import Html.App as App
-import Html.Attributes as Attr
+import Html.Events exposing (onClick,onInput)
 import Time exposing (Time)
 import Task
 import Color exposing (Color)
@@ -13,7 +13,6 @@ import Random.Pcg as Random exposing (Generator, Seed)
 
 import Collage exposing (Form)
 import Element exposing (Element)
-import Text exposing (Text)
 import Transform
 
 
@@ -84,6 +83,7 @@ type alias Model =
     , canvasWidth : Int
     , balls : List Ball
     , fpsCounter : FPSCounter
+    , inputNum : Int
     }
 
 
@@ -93,6 +93,7 @@ init =
      , canvasWidth=600
      , balls = []
      , fpsCounter = newFPSCounter
+     , inputNum = 20
      }
   , (Random.list 20 (randBall 600 600) ) |> Random.generate Construct
   )
@@ -101,7 +102,9 @@ init =
 -- UPDATE
 
 type Msg
-  = Construct (List Ball)
+  = Generate
+  | UpdateNum Int
+  | Construct (List Ball)
   | Step Time
 
 
@@ -126,6 +129,12 @@ teleportBall b x y =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
+    Generate ->
+        (model, (Random.list model.inputNum (randBall 600 600) ) |> Random.generate Construct)
+    
+    UpdateNum n ->
+        ({model | inputNum = n}, Cmd.none)
+
     Construct balls ->
         ({model | balls = balls}, Cmd.none)
 
@@ -172,7 +181,12 @@ view model =
     let
         canvas = viewCanvas model
         fps = viewFPS <| getFPS model.fpsCounter
-        resetButton = Html.button [] [Html.text "Generate"]
-        inputNum = Html.input [] []
+        resetButton = Html.button [onClick Generate] [Html.text "Generate"]
+        inputNum = Html.input [onInput (UpdateNum << Result.withDefault 20 << String.toInt)] []
     in
-    Html.body [] [canvas, Html.hr [] [], Html.p [] [fps], Html.p [] [resetButton, inputNum]] 
+    Html.body [] [
+        canvas
+        , Html.hr [] []
+        , Html.p [] [fps]
+        , Html.p [] [Html.text "Enter number of balls: ", inputNum,resetButton]
+    ] 
