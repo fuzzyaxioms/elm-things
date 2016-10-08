@@ -11568,7 +11568,14 @@ var _user$project$BouncingBall$viewFPS = function (fps) {
 				_evancz$elm_graphics$Text$color,
 				_elm_lang$core$Color$white,
 				_evancz$elm_graphics$Text$fromString(
-					_elm_lang$core$Basics$toString(fps)))));
+					A2(
+						F2(
+							function (x, y) {
+								return A2(_elm_lang$core$Basics_ops['++'], x, y);
+							}),
+						'FPS: ',
+						_elm_lang$core$Basics$toString(
+							_elm_lang$core$Basics$round(fps)))))));
 };
 var _user$project$BouncingBall$viewBall = function (b) {
 	return A2(
@@ -11578,36 +11585,6 @@ var _user$project$BouncingBall$viewBall = function (b) {
 			_evancz$elm_graphics$Collage$filled,
 			b.clr,
 			_evancz$elm_graphics$Collage$circle(b.r)));
-};
-var _user$project$BouncingBall$view = function (model) {
-	var background = A2(
-		_evancz$elm_graphics$Collage$filled,
-		_elm_lang$core$Color$black,
-		A2(
-			_evancz$elm_graphics$Collage$rect,
-			_elm_lang$core$Basics$toFloat(model.canvasWidth),
-			_elm_lang$core$Basics$toFloat(model.canvasHeight)));
-	var repos = A2(
-		_evancz$elm_graphics$Transform$translation,
-		(0 - _elm_lang$core$Basics$toFloat(model.canvasWidth)) / 2,
-		(0 - _elm_lang$core$Basics$toFloat(model.canvasHeight)) / 2);
-	var forms = A2(
-		_evancz$elm_graphics$Collage$groupTransform,
-		repos,
-		A2(
-			_elm_lang$core$Basics_ops['++'],
-			_elm_lang$core$Native_List.fromArray(
-				[
-					_user$project$BouncingBall$viewFPS(model.fps)
-				]),
-			A2(_elm_lang$core$List$map, _user$project$BouncingBall$viewBall, model.balls)));
-	return _evancz$elm_graphics$Element$toHtml(
-		A3(
-			_evancz$elm_graphics$Collage$collage,
-			model.canvasWidth,
-			model.canvasHeight,
-			_elm_lang$core$Native_List.fromArray(
-				[background, forms])));
 };
 var _user$project$BouncingBall$teleportBall = F3(
 	function (b, x, y) {
@@ -11629,32 +11606,26 @@ var _user$project$BouncingBall$updateBall = F4(
 			b,
 			{x: x3, y: y3, dx: dx2, dy: dy2});
 	});
+var _user$project$BouncingBall$updateFPSCounter = F2(
+	function (_p0, diff) {
+		var _p1 = _p0;
+		var s = _elm_lang$core$Time$inSeconds(diff) + 1.0e-7;
+		var w = 1.0 / (1.0 + Math.pow(_elm_lang$core$Basics$e, 0 - s));
+		return {fps: ((1.0 - w) * _p1.fps) + (w * (1.0 / s))};
+	});
 var _user$project$BouncingBall$update = F2(
 	function (msg, model) {
-		var _p0 = msg;
-		if (_p0.ctor === 'Construct') {
+		var _p2 = msg;
+		if (_p2.ctor === 'Construct') {
 			return {
 				ctor: '_Tuple2',
 				_0: _elm_lang$core$Native_Utils.update(
 					model,
-					{balls: _p0._0}),
+					{balls: _p2._0}),
 				_1: _elm_lang$core$Platform_Cmd$none
 			};
 		} else {
-			var _p2 = _p0._0;
-			var newNumMS = model.numMS + _p2;
-			var newNumFrames = model.numFrames + 1;
-			var _p1 = (_elm_lang$core$Native_Utils.cmp(
-				_elm_lang$core$Time$inSeconds(newNumMS),
-				1.0) > -1) ? {
-				ctor: '_Tuple3',
-				_0: 0,
-				_1: 0,
-				_2: newNumFrames / _elm_lang$core$Time$inSeconds(newNumMS)
-			} : {ctor: '_Tuple3', _0: newNumFrames, _1: newNumMS, _2: model.fps};
-			var newNumFrames2 = _p1._0;
-			var newNumMS2 = _p1._1;
-			var newFPS = _p1._2;
+			var _p3 = _p2._0;
 			return {
 				ctor: '_Tuple2',
 				_0: _elm_lang$core$Native_Utils.update(
@@ -11662,33 +11633,49 @@ var _user$project$BouncingBall$update = F2(
 					{
 						balls: A2(
 							_elm_lang$core$List$map,
-							A3(_user$project$BouncingBall$updateBall, model.canvasWidth, model.canvasHeight, _p2),
+							A3(_user$project$BouncingBall$updateBall, model.canvasWidth, model.canvasHeight, _p3),
 							model.balls),
-						numFrames: newNumFrames2,
-						numMS: newNumMS2,
-						fps: newFPS
+						fpsCounter: A2(_user$project$BouncingBall$updateFPSCounter, model.fpsCounter, _p3)
 					}),
 				_1: _elm_lang$core$Platform_Cmd$none
 			};
 		}
 	});
-var _user$project$BouncingBall$colorToHTML = function (clr) {
-	var clrRec = _elm_lang$core$Color$toRgb(clr);
-	var r = function (_) {
-		return _.red;
-	}(clrRec);
-	var g = function (_) {
-		return _.green;
-	}(clrRec);
-	var b = function (_) {
-		return _.blue;
-	}(clrRec);
-	return A2(
-		_elm_lang$core$Basics_ops['++'],
-		'rgb',
-		_elm_lang$core$Basics$toString(
-			{ctor: '_Tuple3', _0: r, _1: g, _2: b}));
+var _user$project$BouncingBall$getFPS = function (_) {
+	return _.fps;
 };
+var _user$project$BouncingBall$view = function (model) {
+	var background = A2(
+		_evancz$elm_graphics$Collage$filled,
+		_elm_lang$core$Color$black,
+		A2(
+			_evancz$elm_graphics$Collage$rect,
+			_elm_lang$core$Basics$toFloat(model.canvasWidth),
+			_elm_lang$core$Basics$toFloat(model.canvasHeight)));
+	var repos = A2(
+		_evancz$elm_graphics$Transform$translation,
+		(0 - _elm_lang$core$Basics$toFloat(model.canvasWidth)) / 2,
+		(0 - _elm_lang$core$Basics$toFloat(model.canvasHeight)) / 2);
+	var forms = A2(
+		_evancz$elm_graphics$Collage$groupTransform,
+		repos,
+		A2(
+			_elm_lang$core$Basics_ops['++'],
+			_elm_lang$core$Native_List.fromArray(
+				[
+					_user$project$BouncingBall$viewFPS(
+					_user$project$BouncingBall$getFPS(model.fpsCounter))
+				]),
+			A2(_elm_lang$core$List$map, _user$project$BouncingBall$viewBall, model.balls)));
+	return _evancz$elm_graphics$Element$toHtml(
+		A3(
+			_evancz$elm_graphics$Collage$collage,
+			model.canvasWidth,
+			model.canvasHeight,
+			_elm_lang$core$Native_List.fromArray(
+				[background, forms])));
+};
+var _user$project$BouncingBall$newFPSCounter = {fps: 0.0};
 var _user$project$BouncingBall$randColor = function () {
 	var r3 = A2(_mgold$elm_random_pcg$Random_Pcg$int, 0, 255);
 	var r2 = A2(_mgold$elm_random_pcg$Random_Pcg$int, 0, 255);
@@ -11742,18 +11729,21 @@ var _user$project$BouncingBall$Ball = F6(
 	function (a, b, c, d, e, f) {
 		return {x: a, y: b, dx: c, dy: d, r: e, clr: f};
 	});
-var _user$project$BouncingBall$Model = F6(
-	function (a, b, c, d, e, f) {
-		return {canvasHeight: a, canvasWidth: b, balls: c, numFrames: d, numMS: e, fps: f};
+var _user$project$BouncingBall$FPSCounter = function (a) {
+	return {fps: a};
+};
+var _user$project$BouncingBall$Model = F4(
+	function (a, b, c, d) {
+		return {canvasHeight: a, canvasWidth: b, balls: c, fpsCounter: d};
 	});
 var _user$project$BouncingBall$Step = function (a) {
 	return {ctor: 'Step', _0: a};
 };
 var _user$project$BouncingBall$subscriptions = function (model) {
 	return _elm_lang$animation_frame$AnimationFrame$diffs(
-		function (_p3) {
+		function (_p4) {
 			return _user$project$BouncingBall$Step(
-				A3(_elm_lang$core$Basics$clamp, 0.0, 100.0, _p3));
+				A3(_elm_lang$core$Basics$clamp, 0.0, 100.0, _p4));
 		});
 };
 var _user$project$BouncingBall$Construct = function (a) {
@@ -11766,9 +11756,7 @@ var _user$project$BouncingBall$init = {
 		canvasWidth: 600,
 		balls: _elm_lang$core$Native_List.fromArray(
 			[]),
-		numFrames: 0,
-		numMS: 0,
-		fps: 0
+		fpsCounter: _user$project$BouncingBall$newFPSCounter
 	},
 	_1: A2(
 		_mgold$elm_random_pcg$Random_Pcg$generate,
