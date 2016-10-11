@@ -1,4 +1,4 @@
-module BouncingBall exposing (main)
+module Main exposing (main)
 
 import Html exposing (Html)
 import Html.App as App
