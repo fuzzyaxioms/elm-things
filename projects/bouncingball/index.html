@@ -12028,16 +12028,41 @@ var _user$project$Main$viewFPS = function (fps) {
 				a,
 				A2(_elm_lang$core$Basics_ops['++'], '.', b))));
 };
+var _user$project$Main$updateFPSCounter = F2(
+	function (_p0, diff) {
+		var _p1 = _p0;
+		var s = _elm_lang$core$Time$inSeconds(diff) + 1.0e-7;
+		var w = 1.0 / (1.0 + (10 * Math.pow(_elm_lang$core$Basics$e, 0 - s)));
+		return {fps: ((1.0 - w) * _p1.fps) + (w * (1.0 / s))};
+	});
+var _user$project$Main$getFPS = function (_) {
+	return _.fps;
+};
+var _user$project$Main$newFPSCounter = {fps: 0.0};
+var _user$project$Main$newModel = F2(
+	function (w, h) {
+		return {
+			canvasHeight: h,
+			canvasWidth: w,
+			leftBound: (0 - _elm_lang$core$Basics$toFloat(w)) / 2.0,
+			rightBound: _elm_lang$core$Basics$toFloat(w) / 2.0,
+			upBound: _elm_lang$core$Basics$toFloat(h) / 2.0,
+			downBound: (0 - _elm_lang$core$Basics$toFloat(h)) / 2.0,
+			balls: _elm_lang$core$Native_List.fromArray(
+				[]),
+			fpsCounter: _user$project$Main$newFPSCounter,
+			inputNum: 20
+		};
+	});
+var _user$project$Main$initModel = A2(_user$project$Main$newModel, 600, 600);
 var _user$project$Main$viewBall = function (b) {
 	return A2(
 		_evancz$elm_graphics$Collage$move,
-		{ctor: '_Tuple2', _0: b.x, _1: b.y},
-		A2(
-			_evancz$elm_graphics$Collage$filled,
-			b.clr,
-			_evancz$elm_graphics$Collage$circle(b.r)));
+		_elm_community$elm_linear_algebra$Math_Vector2$toTuple(b.pos),
+		b.form);
 };
 var _user$project$Main$viewCanvas = function (model) {
+	var forms = A2(_elm_lang$core$List$map, _user$project$Main$viewBall, model.balls);
 	var background = A2(
 		_evancz$elm_graphics$Collage$filled,
 		_elm_lang$core$Color$black,
@@ -12045,53 +12070,41 @@ var _user$project$Main$viewCanvas = function (model) {
 			_evancz$elm_graphics$Collage$rect,
 			_elm_lang$core$Basics$toFloat(model.canvasWidth),
 			_elm_lang$core$Basics$toFloat(model.canvasHeight)));
-	var repos = A2(
-		_evancz$elm_graphics$Transform$translation,
-		(0 - _elm_lang$core$Basics$toFloat(model.canvasWidth)) / 2,
-		(0 - _elm_lang$core$Basics$toFloat(model.canvasHeight)) / 2);
-	var forms = A2(
-		_evancz$elm_graphics$Collage$groupTransform,
-		repos,
-		A2(_elm_lang$core$List$map, _user$project$Main$viewBall, model.balls));
 	return _evancz$elm_graphics$Element$toHtml(
 		A3(
 			_evancz$elm_graphics$Collage$collage,
 			model.canvasWidth,
 			model.canvasHeight,
-			_elm_lang$core$Native_List.fromArray(
-				[background, forms])));
+			A2(_elm_lang$core$List_ops['::'], background, forms)));
 };
-var _user$project$Main$teleportBall = F3(
-	function (b, x, y) {
+var _user$project$Main$updateBall = F3(
+	function (m, dt, b) {
+		var _p2 = _elm_community$elm_linear_algebra$Math_Vector2$toTuple(b.vel);
+		var dx = _p2._0;
+		var dy = _p2._1;
+		var _p3 = _elm_community$elm_linear_algebra$Math_Vector2$toTuple(
+			A2(
+				_elm_community$elm_linear_algebra$Math_Vector2$add,
+				b.pos,
+				A2(
+					_elm_community$elm_linear_algebra$Math_Vector2$scale,
+					_elm_lang$core$Time$inSeconds(dt),
+					b.vel)));
+		var x = _p3._0;
+		var y = _p3._1;
+		var _p4 = (_elm_lang$core$Native_Utils.cmp(x - b.r, m.leftBound) < 1) ? {ctor: '_Tuple2', _0: m.leftBound + b.r, _1: 0 - dx} : ((_elm_lang$core$Native_Utils.cmp(x + b.r, m.rightBound) > -1) ? {ctor: '_Tuple2', _0: m.rightBound - b.r, _1: 0 - dx} : {ctor: '_Tuple2', _0: x, _1: dx});
+		var x2 = _p4._0;
+		var dx2 = _p4._1;
+		var _p5 = (_elm_lang$core$Native_Utils.cmp(y - b.r, m.downBound) < 1) ? {ctor: '_Tuple2', _0: m.downBound + b.r, _1: 0 - dy} : ((_elm_lang$core$Native_Utils.cmp(y + b.r, m.upBound) > -1) ? {ctor: '_Tuple2', _0: m.upBound - b.r, _1: 0 - dy} : {ctor: '_Tuple2', _0: y, _1: dy});
+		var y2 = _p5._0;
+		var dy2 = _p5._1;
 		return _elm_lang$core$Native_Utils.update(
 			b,
-			{x: x, y: y});
+			{
+				pos: A2(_elm_community$elm_linear_algebra$Math_Vector2$vec2, x2, y2),
+				vel: A2(_elm_community$elm_linear_algebra$Math_Vector2$vec2, dx2, dy2)
+			});
 	});
-var _user$project$Main$updateBall = F4(
-	function (w_, h_, dt, b) {
-		var y2 = b.y + (b.dy * _elm_lang$core$Time$inSeconds(dt));
-		var x2 = b.x + (b.dx * _elm_lang$core$Time$inSeconds(dt));
-		var h = _elm_lang$core$Basics$toFloat(h_);
-		var dy2 = ((_elm_lang$core$Native_Utils.cmp(y2, b.r) < 1) || (_elm_lang$core$Native_Utils.cmp(y2 + b.r, h) > -1)) ? (0 - b.dy) : b.dy;
-		var y3 = A3(_elm_lang$core$Basics$clamp, b.r, h - b.r, y2);
-		var w = _elm_lang$core$Basics$toFloat(w_);
-		var dx2 = ((_elm_lang$core$Native_Utils.cmp(x2, b.r) < 1) || (_elm_lang$core$Native_Utils.cmp(x2 + b.r, w) > -1)) ? (0 - b.dx) : b.dx;
-		var x3 = A3(_elm_lang$core$Basics$clamp, b.r, w - b.r, x2);
-		return _elm_lang$core$Native_Utils.update(
-			b,
-			{x: x3, y: y3, dx: dx2, dy: dy2});
-	});
-var _user$project$Main$updateFPSCounter = F2(
-	function (_p0, diff) {
-		var _p1 = _p0;
-		var s = _elm_lang$core$Time$inSeconds(diff) + 1.0e-7;
-		var w = 1.0 / (1.0 + Math.pow(_elm_lang$core$Basics$e, 0 - s));
-		return {fps: ((1.0 - w) * _p1.fps) + (w * (1.0 / s))};
-	});
-var _user$project$Main$getFPS = function (_) {
-	return _.fps;
-};
-var _user$project$Main$newFPSCounter = {fps: 0.0};
 var _user$project$Main$randColor = function () {
 	var r3 = A2(_mgold$elm_random_pcg$Random_Pcg$int, 0, 255);
 	var r2 = A2(_mgold$elm_random_pcg$Random_Pcg$int, 0, 255);
@@ -12100,31 +12113,47 @@ var _user$project$Main$randColor = function () {
 }();
 var _user$project$Main$newBall = F6(
 	function (r, x, y, dx, dy, clr) {
-		return {x: x, y: y, dx: dx, dy: dy, r: r, clr: clr};
+		return {
+			pos: A2(_elm_community$elm_linear_algebra$Math_Vector2$vec2, x, y),
+			vel: A2(_elm_community$elm_linear_algebra$Math_Vector2$vec2, dx, dy),
+			r: r,
+			clr: clr,
+			form: A2(
+				_evancz$elm_graphics$Collage$filled,
+				clr,
+				_evancz$elm_graphics$Collage$circle(r))
+		};
 	});
-var _user$project$Main$randBall = F2(
-	function (w, h) {
-		var randDy = A2(
-			_mgold$elm_random_pcg$Random_Pcg$map,
-			_elm_lang$core$Basics$toFloat,
-			A2(_mgold$elm_random_pcg$Random_Pcg$int, 5, 200));
-		var randDx = A2(
-			_mgold$elm_random_pcg$Random_Pcg$map,
-			_elm_lang$core$Basics$toFloat,
-			A2(_mgold$elm_random_pcg$Random_Pcg$int, 5, 200));
-		var randY = A2(
-			_mgold$elm_random_pcg$Random_Pcg$map,
-			_elm_lang$core$Basics$toFloat,
-			A2(_mgold$elm_random_pcg$Random_Pcg$int, 0, h));
-		var randX = A2(
-			_mgold$elm_random_pcg$Random_Pcg$map,
-			_elm_lang$core$Basics$toFloat,
-			A2(_mgold$elm_random_pcg$Random_Pcg$int, 0, w));
-		var randR = A2(
-			_mgold$elm_random_pcg$Random_Pcg$map,
-			_elm_lang$core$Basics$toFloat,
-			A2(_mgold$elm_random_pcg$Random_Pcg$int, 5, 50));
-		return A2(
+var _user$project$Main$randBall = function (model) {
+	var randDy = A2(
+		_mgold$elm_random_pcg$Random_Pcg$map,
+		_elm_lang$core$Basics$toFloat,
+		A2(_mgold$elm_random_pcg$Random_Pcg$int, 5, 200));
+	var randDx = A2(
+		_mgold$elm_random_pcg$Random_Pcg$map,
+		_elm_lang$core$Basics$toFloat,
+		A2(_mgold$elm_random_pcg$Random_Pcg$int, 5, 200));
+	var randY = A2(
+		_mgold$elm_random_pcg$Random_Pcg$map,
+		_elm_lang$core$Basics$toFloat,
+		A2(
+			_mgold$elm_random_pcg$Random_Pcg$int,
+			_elm_lang$core$Basics$round(model.downBound),
+			_elm_lang$core$Basics$round(model.upBound)));
+	var randX = A2(
+		_mgold$elm_random_pcg$Random_Pcg$map,
+		_elm_lang$core$Basics$toFloat,
+		A2(
+			_mgold$elm_random_pcg$Random_Pcg$int,
+			_elm_lang$core$Basics$round(model.leftBound),
+			_elm_lang$core$Basics$round(model.rightBound)));
+	var randR = A2(
+		_mgold$elm_random_pcg$Random_Pcg$map,
+		_elm_lang$core$Basics$toFloat,
+		A2(_mgold$elm_random_pcg$Random_Pcg$int, 5, 50));
+	return A2(
+		_mgold$elm_random_pcg$Random_Pcg$andMap,
+		A2(
 			_mgold$elm_random_pcg$Random_Pcg$andMap,
 			A2(
 				_mgold$elm_random_pcg$Random_Pcg$andMap,
@@ -12132,34 +12161,32 @@ var _user$project$Main$randBall = F2(
 					_mgold$elm_random_pcg$Random_Pcg$andMap,
 					A2(
 						_mgold$elm_random_pcg$Random_Pcg$andMap,
-						A2(
-							_mgold$elm_random_pcg$Random_Pcg$andMap,
-							A2(_mgold$elm_random_pcg$Random_Pcg$map, _user$project$Main$newBall, randR),
-							randX),
-						randY),
-					randDx),
-				randDy),
-			_user$project$Main$randColor);
-	});
-var _user$project$Main$Ball = F6(
-	function (a, b, c, d, e, f) {
-		return {x: a, y: b, dx: c, dy: d, r: e, clr: f};
+						A2(_mgold$elm_random_pcg$Random_Pcg$map, _user$project$Main$newBall, randR),
+						randX),
+					randY),
+				randDx),
+			randDy),
+		_user$project$Main$randColor);
+};
+var _user$project$Main$Ball = F5(
+	function (a, b, c, d, e) {
+		return {pos: a, vel: b, r: c, clr: d, form: e};
 	});
 var _user$project$Main$FPSCounter = function (a) {
 	return {fps: a};
 };
-var _user$project$Main$Model = F5(
-	function (a, b, c, d, e) {
-		return {canvasHeight: a, canvasWidth: b, balls: c, fpsCounter: d, inputNum: e};
+var _user$project$Main$Model = F9(
+	function (a, b, c, d, e, f, g, h, i) {
+		return {canvasHeight: a, canvasWidth: b, leftBound: c, rightBound: d, upBound: e, downBound: f, balls: g, fpsCounter: h, inputNum: i};
 	});
 var _user$project$Main$Step = function (a) {
 	return {ctor: 'Step', _0: a};
 };
 var _user$project$Main$subscriptions = function (model) {
 	return _elm_lang$animation_frame$AnimationFrame$diffs(
-		function (_p2) {
+		function (_p6) {
 			return _user$project$Main$Step(
-				A3(_elm_lang$core$Basics$clamp, 0.0, 100.0, _p2));
+				A3(_elm_lang$core$Basics$clamp, 0.0, 100.0, _p6));
 		});
 };
 var _user$project$Main$Construct = function (a) {
@@ -12167,26 +12194,19 @@ var _user$project$Main$Construct = function (a) {
 };
 var _user$project$Main$init = {
 	ctor: '_Tuple2',
-	_0: {
-		canvasHeight: 600,
-		canvasWidth: 600,
-		balls: _elm_lang$core$Native_List.fromArray(
-			[]),
-		fpsCounter: _user$project$Main$newFPSCounter,
-		inputNum: 20
-	},
+	_0: _user$project$Main$initModel,
 	_1: A2(
 		_mgold$elm_random_pcg$Random_Pcg$generate,
 		_user$project$Main$Construct,
 		A2(
 			_mgold$elm_random_pcg$Random_Pcg$list,
 			20,
-			A2(_user$project$Main$randBall, 600, 600)))
+			_user$project$Main$randBall(_user$project$Main$initModel)))
 };
 var _user$project$Main$update = F2(
 	function (msg, model) {
-		var _p3 = msg;
-		switch (_p3.ctor) {
+		var _p7 = msg;
+		switch (_p7.ctor) {
 			case 'Generate':
 				return {
 					ctor: '_Tuple2',
@@ -12197,14 +12217,14 @@ var _user$project$Main$update = F2(
 						A2(
 							_mgold$elm_random_pcg$Random_Pcg$list,
 							model.inputNum,
-							A2(_user$project$Main$randBall, 600, 600)))
+							_user$project$Main$randBall(model)))
 				};
 			case 'UpdateNum':
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{inputNum: _p3._0}),
+						{inputNum: _p7._0}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'Construct':
@@ -12212,11 +12232,11 @@ var _user$project$Main$update = F2(
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
-						{balls: _p3._0}),
+						{balls: _p7._0}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			default:
-				var _p4 = _p3._0;
+				var _p8 = _p7._0;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
@@ -12224,9 +12244,9 @@ var _user$project$Main$update = F2(
 						{
 							balls: A2(
 								_elm_lang$core$List$map,
-								A3(_user$project$Main$updateBall, model.canvasWidth, model.canvasHeight, _p4),
+								A2(_user$project$Main$updateBall, model, _p8),
 								model.balls),
-							fpsCounter: A2(_user$project$Main$updateFPSCounter, model.fpsCounter, _p4)
+							fpsCounter: A2(_user$project$Main$updateFPSCounter, model.fpsCounter, _p8)
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
@@ -12252,12 +12272,12 @@ var _user$project$Main$view = function (model) {
 		_elm_lang$core$Native_List.fromArray(
 			[
 				_elm_lang$html$Html_Events$onInput(
-				function (_p5) {
+				function (_p9) {
 					return _user$project$Main$UpdateNum(
 						A2(
 							_elm_lang$core$Result$withDefault,
 							20,
-							_elm_lang$core$String$toInt(_p5)));
+							_elm_lang$core$String$toInt(_p9)));
 				})
 			]),
 		_elm_lang$core$Native_List.fromArray(
