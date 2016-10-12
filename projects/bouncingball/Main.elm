@@ -29,17 +29,16 @@ main =
 
 -- MODEL
 
+-- Ball stuff
 type alias Ball =
-    { x : Float
-    , y : Float
-    , dx : Float -- pixels per second
-    , dy : Float -- pixels per second
+    { pos : Vec2
+    , vel : Vec2
     , r : Float
     , clr : Color
     }
 
 newBall : Float -> Float -> Float -> Float -> Float -> Color -> Ball
-newBall r x y dx dy clr = {x=x, y=y, dx=dx, dy=dy, r=r, clr=clr}
+newBall r x y dx dy clr = {pos=vec2 x y, vel=vec2 dx dy, r=r, clr=clr}
 
 randColor : Generator Color
 randColor =
@@ -61,6 +60,22 @@ randBall w h =
     in
     newBall `Random.map` randR `Random.andMap` randX `Random.andMap` randY `Random.andMap` randDx `Random.andMap` randDy `Random.andMap` randColor
 
+
+updateBall : Int -> Int -> Time -> Ball -> Ball
+updateBall w_ h_ dt b =
+    let
+        w = toFloat w_
+        h = toFloat h_
+        (x,y) = toTuple <| add b.pos <| scale (Time.inSeconds dt) b.vel
+        (dx,dy) = toTuple b.vel
+        (x2,dx2) = if x <= b.r then (b.r, -dx) else if x + b.r >= w then (w - b.r, -dx) else (x, dx)
+        (y2,dy2) = if y <= b.r then (b.r, -dy) else if y + b.r >= h then (h - b.r, -dy) else (y, dy)
+    in
+    {b | pos = vec2 x2 y2, vel = vec2 dx2 dy2}
+
+viewBall : Ball -> Form
+viewBall b =
+    Collage.move (toTuple b.pos) <| Collage.filled b.clr <| Collage.circle b.r
 
 type alias FPSCounter = { fps : Float }
 
@@ -108,25 +123,6 @@ type Msg
   | Construct (List Ball)
   | Step Time
 
-
-updateBall : Int -> Int -> Time -> Ball -> Ball
-updateBall w_ h_ dt b =
-    let
-        w = toFloat w_
-        h = toFloat h_
-        x2 = b.x + b.dx * Time.inSeconds dt
-        y2 = b.y + b.dy * Time.inSeconds dt
-        dx2 = if x2 <= b.r || x2 + b.r >= w then -b.dx else b.dx
-        dy2 = if y2 <= b.r || y2 + b.r >= h then -b.dy else b.dy
-        x3 = clamp b.r (w - b.r) x2
-        y3 = clamp b.r (h - b.r) y2
-    in
-    {b | x = x3, y = y3, dx = dx2, dy = dy2}
-
-teleportBall : Ball -> Float -> Float -> Ball
-teleportBall b x y =
-    {b | x = x, y = y}
-
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
@@ -154,10 +150,6 @@ subscriptions model =
 
 
 -- VIEW
-
-viewBall : Ball -> Form
-viewBall b =
-    Collage.move (b.x, b.y) <| Collage.filled b.clr <| Collage.circle b.r
 
 viewFPS : Float -> Html Msg
 viewFPS fps =
