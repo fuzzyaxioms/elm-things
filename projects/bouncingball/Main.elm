@@ -50,27 +50,25 @@ randColor =
     in
     Random.map3 Color.rgb r1 r2 r3
 
-randBall : Int -> Int -> Generator Ball
-randBall w h =
+randBall : Model -> Generator Ball
+randBall model =
     let
         randR = Random.map toFloat <| Random.int 5 50
-        randX = Random.map toFloat <| Random.int 0 w
-        randY = Random.map toFloat <| Random.int 0 h
+        randX = Random.map toFloat <| Random.int (round model.leftBound) (round model.rightBound)
+        randY = Random.map toFloat <| Random.int (round model.downBound) (round model.upBound)
         randDx = Random.map toFloat <| Random.int 5 200
         randDy = Random.map toFloat <| Random.int 5 200
     in
     newBall `Random.map` randR `Random.andMap` randX `Random.andMap` randY `Random.andMap` randDx `Random.andMap` randDy `Random.andMap` randColor
 
 
-updateBall : Int -> Int -> Time -> Ball -> Ball
-updateBall w_ h_ dt b =
+updateBall : Model -> Time -> Ball -> Ball
+updateBall m dt b =
     let
-        w = toFloat w_
-        h = toFloat h_
         (x,y) = toTuple <| add b.pos <| scale (Time.inSeconds dt) b.vel
         (dx,dy) = toTuple b.vel
-        (x2,dx2) = if x <= b.r then (b.r, -dx) else if x + b.r >= w then (w - b.r, -dx) else (x, dx)
-        (y2,dy2) = if y <= b.r then (b.r, -dy) else if y + b.r >= h then (h - b.r, -dy) else (y, dy)
+        (x2,dx2) = if x - b.r <= m.leftBound then (m.leftBound + b.r, -dx) else if x + b.r >= m.rightBound then (m.rightBound - b.r, -dx) else (x, dx)
+        (y2,dy2) = if y - b.r <= m.downBound then (m.downBound + b.r, -dy) else if y + b.r >= m.upBound then (m.upBound - b.r, -dy) else (y, dy)
     in
     {b | pos = vec2 x2 y2, vel = vec2 dx2 dy2}
 
@@ -91,28 +89,42 @@ updateFPSCounter : FPSCounter -> Time -> FPSCounter
 updateFPSCounter {fps} diff =
     let
         s = Time.inSeconds diff + 0.0000001 -- avoid division by zero
-        w = 1.0 / (1.0 + e^(-s))
+        w = 1.0 / (1.0 + 10*e^(-s))
     in
     {fps = (1.0-w)*fps + w * (1.0 / s)}
 
 type alias Model =
     { canvasHeight : Int
     , canvasWidth : Int
+    , leftBound : Float
+    , rightBound : Float
+    , upBound : Float
+    , downBound : Float
     , balls : List Ball
     , fpsCounter : FPSCounter
     , inputNum : Int
     }
 
-
-init : (Model, Cmd Msg)
-init =
-  ( { canvasHeight=600
-     , canvasWidth=600
+newModel : Int -> Int -> Model
+newModel w h =
+    { canvasHeight=h
+     , canvasWidth=w
+     , leftBound = -(toFloat w) / 2.0
+     , rightBound = toFloat w / 2.0
+     , upBound = toFloat h / 2.0
+     , downBound = -(toFloat h) / 2.0
      , balls = []
      , fpsCounter = newFPSCounter
      , inputNum = 20
      }
-  , (Random.list 20 (randBall 600 600) ) |> Random.generate Construct
+
+initModel : Model
+initModel = newModel 600 600
+
+init : (Model, Cmd Msg)
+init =
+  ( initModel
+  , (Random.list 20 (randBall initModel) ) |> Random.generate Construct
   )
 
 
@@ -128,7 +140,7 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     Generate ->
-        (model, (Random.list model.inputNum (randBall model.canvasWidth model.canvasHeight) ) |> Random.generate Construct)
+        (model, (Random.list model.inputNum (randBall model) ) |> Random.generate Construct)
     
     UpdateNum n ->
         ({model | inputNum = n}, Cmd.none)
@@ -138,7 +150,7 @@ update msg model =
 
     Step diff ->
       ({model | balls =
-        List.map (updateBall model.canvasWidth model.canvasHeight diff) model.balls,
+        List.map (updateBall model diff) model.balls,
         fpsCounter = updateFPSCounter model.fpsCounter diff},
       Cmd.none)
 
@@ -164,11 +176,10 @@ viewFPS fps =
 viewCanvas : Model -> Html Msg
 viewCanvas model =
     let
-        repos = Transform.translation (-(toFloat model.canvasWidth)/2) (-(toFloat model.canvasHeight)/2)
         background = Collage.filled Color.black <| Collage.rect (toFloat model.canvasWidth) (toFloat model.canvasHeight)
-        forms = Collage.groupTransform repos <| List.map viewBall model.balls
+        forms = List.map viewBall model.balls
     in
-    Element.toHtml <| Collage.collage model.canvasWidth model.canvasHeight [background,forms]
+    Element.toHtml <| Collage.collage model.canvasWidth model.canvasHeight (background :: forms)
 
 view : Model -> Html Msg
 view model =
