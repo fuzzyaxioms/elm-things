@@ -149,8 +149,10 @@ update msg model =
         ({model | balls = balls}, Cmd.none)
 
     Step diff ->
-      ({model | balls =
-        List.map (updateBall model diff) model.balls,
+        let 
+            newBalls = List.map (updateBall model diff) model.balls
+        in
+      ({model | balls = newBalls,
         fpsCounter = updateFPSCounter model.fpsCounter diff},
       Cmd.none)
 
