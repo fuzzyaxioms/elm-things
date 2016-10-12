@@ -35,10 +35,11 @@ type alias Ball =
     , vel : Vec2
     , r : Float
     , clr : Color
+    , form : Form -- see if we can speed things up by partially generating the filled circle form
     }
 
 newBall : Float -> Float -> Float -> Float -> Float -> Color -> Ball
-newBall r x y dx dy clr = {pos=vec2 x y, vel=vec2 dx dy, r=r, clr=clr}
+newBall r x y dx dy clr = {pos=vec2 x y, vel=vec2 dx dy, r=r, clr=clr, form=Collage.filled clr <| Collage.circle r}
 
 randColor : Generator Color
 randColor =
@@ -75,7 +76,7 @@ updateBall w_ h_ dt b =
 
 viewBall : Ball -> Form
 viewBall b =
-    Collage.move (toTuple b.pos) <| Collage.filled b.clr <| Collage.circle b.r
+    Collage.move (toTuple b.pos) <| b.form
 
 type alias FPSCounter = { fps : Float }
 
@@ -127,7 +128,7 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     Generate ->
-        (model, (Random.list model.inputNum (randBall 600 600) ) |> Random.generate Construct)
+        (model, (Random.list model.inputNum (randBall model.canvasWidth model.canvasHeight) ) |> Random.generate Construct)
     
     UpdateNum n ->
         ({model | inputNum = n}, Cmd.none)
