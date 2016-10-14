@@ -4,6 +4,8 @@ import Html exposing (Html)
 import Html.App as App
 import Html.Events exposing (onSubmit,onInput,onClick)
 import Html.Attributes as Attr
+import Svg exposing (Svg, Attribute)
+import Svg.Attributes as SAttr
 import Time exposing (Time)
 import Task
 import Color exposing (Color)
@@ -27,6 +29,13 @@ main =
     }
 
 
+colorToString : Color -> String
+colorToString clr = 
+    let 
+        {red,green,blue} = Color.toRgb clr
+    in
+    "rgb(" ++ toString red ++ "," ++ toString green ++ "," ++ toString blue ++ ")" 
+
 -- MODEL
 
 -- Ball stuff
@@ -36,10 +45,11 @@ type alias Ball =
     , r : Float
     , clr : Color
     , form : Form -- see if we can speed things up by partially generating the filled circle form
+    , svg : Svg Msg -- see if we can speed things up
     }
 
 newBall : Float -> Float -> Float -> Float -> Float -> Color -> Ball
-newBall r x y dx dy clr = {pos=vec2 x y, vel=vec2 dx dy, r=r, clr=clr, form=Collage.filled clr <| Collage.circle r}
+newBall r x y dx dy clr = {pos=vec2 x y, vel=vec2 dx dy, r=r, clr=clr, form=Collage.filled clr <| Collage.circle r, svg=Svg.circle [SAttr.r <| toString r, SAttr.color <| colorToString clr] []}
 
 randColor : Generator Color
 randColor =
@@ -109,10 +119,10 @@ newModel : Int -> Int -> Model
 newModel w h =
     { canvasHeight=h
      , canvasWidth=w
-     , leftBound = -(toFloat w) / 2.0
-     , rightBound = toFloat w / 2.0
-     , upBound = toFloat h / 2.0
-     , downBound = -(toFloat h) / 2.0
+     , leftBound = 0
+     , rightBound = toFloat w
+     , upBound = toFloat h
+     , downBound = 0
      , balls = []
      , fpsCounter = newFPSCounter
      , inputNum = 20
@@ -183,10 +193,18 @@ viewCanvas model =
     in
     Element.toHtml <| Collage.collage model.canvasWidth model.canvasHeight (background :: forms)
 
+viewCanvasSvg : Model -> Html Msg
+viewCanvasSvg model =
+    let 
+        viewBall b = Svg.circle [SAttr.r <| toString b.r, SAttr.style <| ("fill:" ++ colorToString b.clr), SAttr.cx <| toString <| getX b.pos, SAttr.cy <| toString <| getY b.pos] []
+        balls = List.map viewBall model.balls
+    in
+    Svg.svg [SAttr.width <| toString model.canvasWidth, SAttr.height <| toString model.canvasHeight, SAttr.viewBox <| "0 0 600 600"] balls
+
 view : Model -> Html Msg
 view model =
     let
-        canvas = viewCanvas model
+        canvas = viewCanvasSvg model
         fps = viewFPS <| getFPS model.fpsCounter
         inputNum = Html.input [onInput (UpdateNum << Result.withDefault 20 << String.toInt)] []
         resetButton = Html.button [onClick Generate] [Html.text "Generate"]
