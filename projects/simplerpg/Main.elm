@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Html exposing (Html)
 import Svg exposing (Svg, Attribute)
-import Svg.Attributes as SAttr
+import Svg.Attributes as SA
 import Time exposing (Time)
 import Task
 import Color exposing (Color)
@@ -21,22 +21,33 @@ main =
     , subscriptions = subscriptions
     }
 
-type alias FPSCounter = { fps : Float }
+
+-- Global parameters
+
+-- maximum and minimum milliseconds that are allowed in-between frames
+-- any value outside is clamped
+maxFrameDiff : Float
+maxFrameDiff = 100.0
+
+minFrameDiff : Float
+minFrameDiff = 1e-4
+
+type alias FPSCounter = { frameTime : Float }
 
 newFPSCounter : FPSCounter
-newFPSCounter = {fps=0.0}
+newFPSCounter = {frameTime=1000.0/60.0}
 
 getFPS : FPSCounter -> Float
-getFPS = .fps
+getFPS {frameTime} = 1000.0 / frameTime
 
--- use exponential decay, but weighted with longer incoming diffs
+-- use simple exponential decay
 updateFPSCounter : FPSCounter -> Time -> FPSCounter
-updateFPSCounter {fps} diff =
+updateFPSCounter ({frameTime} as counter) diff =
     let
-        s = Time.inSeconds diff + 0.0000001 -- avoid division by zero
-        w = 1.0 / (1.0 + 10*e^(-s))
+        decay = 0.97
+        frameTime2 = frameTime * decay + (1.0 - decay) * diff
     in
-    {fps = (1.0-w)*fps + w * (1.0 / s)}
+    {counter | frameTime = frameTime2}
 
 type alias Model = 
     { fpsCounter : FPSCounter
@@ -75,7 +86,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-  AnimationFrame.diffs (Step << clamp 0.0 100.0)
+  AnimationFrame.diffs <| Step << clamp minFrameDiff maxFrameDiff
 
 
 -- VIEW
@@ -84,11 +95,25 @@ viewFPS : FPSCounter -> Html Msg
 viewFPS counter =
     let 
         fps = getFPS counter
-        n = round (fps * 100)
-        a = toString (n // 100)
-        b = String.padLeft 2 '0' <| toString (n % 100) 
+        n = floor (fps * 10)
+        a = toString (n // 10)
+        b = String.padLeft 1 '0' <| toString (n % 10) 
     in
     Html.text <| "FPS: " ++ a ++ "." ++ b 
+
+viewSvgTest : Html Msg
+viewSvgTest = 
+    let
+      width = 600
+      height = 600
+      wStr = toString width
+      hStr = toString height
+      viewStr = "0 0 " ++ wStr ++ " " ++ hStr
+      rect1 = Svg.rect [SA.x "0", SA.y "0", SA.width "100", SA.height "100", SA.fill "white"] []
+      rect2 = Svg.rect [SA.x "200", SA.y "300", SA.width "100", SA.height "100", SA.fill "red"] []
+      bg = Svg.rect [SA.x "0", SA.y "0", SA.width wStr, SA.height hStr, SA.fill "black"]  []
+    in
+      Svg.svg [SA.width wStr, SA.height hStr, SA.viewBox viewStr] [bg, rect1, rect2]
 
 view : Model -> Html Msg
 view model =
@@ -97,4 +122,6 @@ view model =
     in
     Html.body []
     [ Html.p [] [fps]
+    , Html.hr [] []
+    , viewSvgTest
     ] 
