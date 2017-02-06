@@ -1,7 +1,6 @@
 module Main exposing (main)
 
 import Html exposing (Html)
-import Html.App as App
 import Html.Events exposing (onSubmit,onInput,onClick)
 import Html.Attributes as Attr
 import Svg exposing (Svg, Attribute)
@@ -19,9 +18,9 @@ import Element exposing (Element)
 import Transform
 
 
-main : Program Never
+main : Program Never Model Msg
 main =
-  App.program
+  Html.program
     { init = init
     , view = view
     , update = update
@@ -68,8 +67,9 @@ randBall model =
         randY = Random.map toFloat <| Random.int (round model.downBound) (round model.upBound)
         randDx = Random.map toFloat <| Random.int 5 200
         randDy = Random.map toFloat <| Random.int 5 200
+        andM = flip Random.andMap
     in
-    newBall `Random.map` randR `Random.andMap` randX `Random.andMap` randY `Random.andMap` randDx `Random.andMap` randDy `Random.andMap` randColor
+    Random.constant newBall |> andM randR |> andM randX |> andM randY |> andM randDx |> andM randDy |> andM randColor
 
 
 updateBall : Model -> Time -> Ball -> Ball
