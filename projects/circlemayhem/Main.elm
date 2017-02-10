@@ -4,12 +4,12 @@ import Html exposing (Html)
 import Svg exposing (Svg, Attribute)
 import Svg.Attributes as SA
 import Time exposing (Time)
-import Task
 import Color exposing (Color)
-import Math.Vector2 exposing (..)
 import String
 import AnimationFrame
-import Random.Pcg as Random exposing (Generator, Seed)
+import Keyboard
+import Char exposing (toCode)
+import Platform.Sub as Sub
 
 
 main : Program Never Model Msg
@@ -32,6 +32,12 @@ maxFrameDiff = 100.0
 minFrameDiff : Float
 minFrameDiff = 1e-4
 
+playerRadius : Float
+playerRadius = 20.0
+
+playerColor : Color
+playerColor = Color.blue
+
 type alias FPSCounter = { frameTime : Float }
 
 newFPSCounter : FPSCounter
@@ -49,13 +55,42 @@ updateFPSCounter ({frameTime} as counter) diff =
     in
     {counter | frameTime = frameTime2}
 
+
+type alias Player =
+    { radius : Float
+    , color : Color
+    , x : Float
+    , y : Float
+    , speed : Float
+    , tUp : ThrustState
+    , tDown : ThrustState
+    , tLeft : ThrustState
+    , tRight : ThrustState
+    }
+
+newPlayer : Player 
+newPlayer = Player playerRadius playerColor 0.0 0.0 300.0 ThrustOff ThrustOff ThrustOff ThrustOff
+
 type alias Model = 
     { fpsCounter : FPSCounter
+    , player : Player
     }
+
+updatePlayer : Player -> Time -> Player
+updatePlayer ({x, y, speed, tUp, tDown, tLeft, tRight} as player) diff = 
+  let
+    elapsed = Time.inMilliseconds diff
+    dx = (elapsed * speed / 1000.0) * (thrustInd tRight - thrustInd tLeft)
+    dy = (elapsed * speed / 1000.0) * (thrustInd tDown - thrustInd tUp)
+    x1 = x + dx
+    y1 = y + dy
+  in
+    {player | x = x1, y = y1}
 
 newModel : Model
 newModel =
     { fpsCounter = newFPSCounter
+    , player = newPlayer
     }
 
 initModel : Model
@@ -70,23 +105,82 @@ init =
 
 -- UPDATE
 
+type ThrustDirection
+  = ThrustUp
+  | ThrustDown
+  | ThrustLeft
+  | ThrustRight
+
+type ThrustState
+  = ThrustOn
+  | ThrustOff
+
+thrustInd : ThrustState -> Float
+thrustInd t = case t of
+  ThrustOn ->
+    1.0
+  ThrustOff ->
+    0.0
+
 type Msg
-  = Step Time
+  = Noop -- sometimes need to react to an event but do nothing
+  | Step Time
+  | Thrust ThrustDirection ThrustState
+
+updateThrust : Model -> ThrustDirection -> ThrustState -> Model
+updateThrust ({player} as model) dir act =
+  let
+    player1 = case dir of
+      ThrustUp ->
+        {player | tUp = act}
+      ThrustDown ->
+        {player | tDown = act}
+      ThrustLeft ->
+        {player | tLeft = act}
+      ThrustRight ->
+        {player | tRight = act}
+  in
+    {model | player = player1}
+    
 
 update : Msg -> Model -> (Model, Cmd Msg)
-update msg model =
+update msg ({player,fpsCounter} as model) =
   case msg of
+    Noop ->
+      (model, Cmd.none)
+    Thrust dir act ->
+      (updateThrust model dir act, Cmd.none)
     Step diff ->
-      ({model |
-        fpsCounter = updateFPSCounter model.fpsCounter diff},
+      ({model
+        | fpsCounter = updateFPSCounter fpsCounter diff
+        , player = updatePlayer player diff},
       Cmd.none)
+    
 
 
 -- SUBSCRIPTIONS
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-  AnimationFrame.diffs <| Step << clamp minFrameDiff maxFrameDiff
+  let
+    makeKeyHandler act keycode =
+      if keycode == Char.toCode 'W' then
+        Thrust ThrustUp act
+      else if keycode == Char.toCode 'A' then
+        Thrust ThrustLeft act
+      else if keycode == Char.toCode 'S' then
+        Thrust ThrustDown act
+      else if keycode == Char.toCode 'D' then
+        Thrust ThrustRight act
+      else
+        Noop
+  in
+    Sub.batch
+    [ AnimationFrame.diffs <| Step << clamp minFrameDiff maxFrameDiff
+    , Keyboard.downs <| makeKeyHandler ThrustOn
+    , Keyboard.ups <| makeKeyHandler ThrustOff
+    ]
+  
 
 
 -- VIEW
@@ -101,19 +195,30 @@ viewFPS counter =
     in
     Html.text <| "FPS: " ++ a ++ "." ++ b 
 
-viewSvgTest : Html Msg
-viewSvgTest = 
+drawPlayer : Player -> Svg Msg
+drawPlayer {x,y,radius,color} = 
+  let
+    cx = SA.cx <| toString x
+    cy = SA.cy <| toString y
+    r = SA.r <| toString radius
+    fillOpacity = SA.fillOpacity "0"
+    stroke = SA.stroke "blue"
+    strokeWidth = SA.strokeWidth "5px"
+  in    
+  Svg.circle [cx, cy, r, fillOpacity, stroke, strokeWidth] []
+
+viewScene : Model -> Html Msg
+viewScene model = 
     let
-      width = 600
-      height = 600
+      width = 720
+      height = 720
       wStr = toString width
       hStr = toString height
       viewStr = "0 0 " ++ wStr ++ " " ++ hStr
-      rect1 = Svg.rect [SA.x "0", SA.y "0", SA.width "100", SA.height "100", SA.fill "white"] []
-      rect2 = Svg.rect [SA.x "200", SA.y "300", SA.width "100", SA.height "100", SA.fill "red"] []
       bg = Svg.rect [SA.x "0", SA.y "0", SA.width wStr, SA.height hStr, SA.fill "black"]  []
+      playerSprite = drawPlayer model.player
     in
-      Svg.svg [SA.width wStr, SA.height hStr, SA.viewBox viewStr] [bg, rect1, rect2]
+      Svg.svg [SA.width wStr, SA.height hStr, SA.viewBox viewStr] [bg, playerSprite]
 
 view : Model -> Html Msg
 view model =
@@ -122,6 +227,7 @@ view model =
     in
     Html.body []
     [ Html.p [] [fps]
+    , Html.p [] [Html.text "WASD to move."]
     , Html.hr [] []
-    , viewSvgTest
+    , viewScene model
     ] 
