@@ -10,6 +10,8 @@ import AnimationFrame
 import Keyboard
 import Char exposing (toCode)
 import Platform.Sub as Sub
+import Random
+import List
 
 
 main : Program Never Model Msg
@@ -24,24 +26,47 @@ main =
 
 -- Global parameters
 
--- maximum and minimum milliseconds that are allowed in-between frames
--- any value outside is clamped
-maxFrameDiff : Float
-maxFrameDiff = 100.0
+type alias Model =
+    { settings : Settings
+    , fpsCounter : FPSCounter
+    , player : Player
+    , enemyManager : EnemyManager
+    }
 
-minFrameDiff : Float
-minFrameDiff = 1e-4
+initModel : Model
+initModel =
+  let
+    settings = initSettings
+  in
+  { settings = settings
+  , fpsCounter = initFPSCounter
+  , player = initPlayer settings
+  , enemyManager = initEnemyManager
+  }
 
-playerRadius : Float
-playerRadius = 20.0
+type alias Settings =
+  { maxFrameDiff : Float
+  , minFrameDiff : Float
+  , screenWidth : Float
+  , screenHeight : Float
+  , playerRadius : Float
+  , playerColor : Color
+  }
 
-playerColor : Color
-playerColor = Color.blue
+initSettings : Settings
+initSettings =
+  { maxFrameDiff = 100.0 -- milliseconds
+  , minFrameDiff = 1e-4
+  , screenWidth = 720.0
+  , screenHeight = 720.0
+  , playerRadius = 20.0
+  , playerColor = Color.blue
+  }
 
 type alias FPSCounter = { frameTime : Float }
 
-newFPSCounter : FPSCounter
-newFPSCounter = {frameTime=1000.0/60.0}
+initFPSCounter : FPSCounter
+initFPSCounter = {frameTime=1000.0/60.0}
 
 getFPS : FPSCounter -> Float
 getFPS {frameTime} = 1000.0 / frameTime
@@ -56,11 +81,19 @@ updateFPSCounter ({frameTime} as counter) diff =
     {counter | frameTime = frameTime2}
 
 
+clampCircleEntity : Float -> Float -> Float -> Float -> Float -> (Float, Float)
+clampCircleEntity x y radius width height =
+  let
+    x1 = if x + radius > width then (width - radius) else if x - radius < 0 then radius else x
+    y1 = if y + radius > width then (width - radius) else if y - radius < 0 then radius else y
+  in
+    (x1, y1)
+
 type alias Player =
-    { radius : Float
-    , color : Color
-    , x : Float
+    { x : Float
     , y : Float
+    , radius : Float
+    , color : Color
     , speed : Float
     , tUp : ThrustState
     , tDown : ThrustState
@@ -68,33 +101,159 @@ type alias Player =
     , tRight : ThrustState
     }
 
-newPlayer : Player 
-newPlayer = Player playerRadius playerColor 0.0 0.0 300.0 ThrustOff ThrustOff ThrustOff ThrustOff
+type alias EnemyManager =
+  { seed : Random.Seed
+  , enemiesNormal : List Enemy
+  , enemiesHoming : List Enemy
+  , enemiesRandom : List Enemy
+  , maxNormal : Int
+  , maxHoming : Int
+  , maxRandom : Int
+  , spawnLapse : Float -- seconds in-between enemy respanws
+  , elapsed : Float -- keep track of elapsed time since last respawn
+  }
 
-type alias Model = 
-    { fpsCounter : FPSCounter
-    , player : Player
+initEnemyManager : EnemyManager
+initEnemyManager = 
+  { seed = Random.initialSeed 0x40e7b36c
+  , enemiesNormal = []
+  , enemiesHoming = []
+  , enemiesRandom = []
+  , maxNormal = 4
+  , maxHoming = 4
+  , maxRandom = 4
+  , spawnLapse = 5.0
+  , elapsed = 5.0
+  }
+
+spawnEnemy : Settings -> EnemyAI -> Random.Seed -> (Enemy, Random.Seed)
+spawnEnemy settings ai seed =
+  Random.step (generateEnemy settings ai) seed
+
+spawnEnemies : Settings -> EnemyAI -> Int -> Random.Seed -> (List Enemy, Random.Seed)
+spawnEnemies settings ai num seed =
+  let
+    acc n s out =
+      if n > 0 then
+        let
+          (newE, newS) = spawnEnemy settings ai s
+        in
+          acc (n-1) newS (newE::out)
+      else
+        (out, s)
+  in
+    acc num seed []
+
+updateEnemyManager : EnemyManager -> Settings -> Time -> EnemyManager
+updateEnemyManager eman settings diff =
+  let
+    diffSeconds = Time.inSeconds diff
+    elapsed1 = eman.elapsed + diffSeconds
+    (enemiesNormal1, enemiesHoming1, enemiesRandom1, seed1, elapsed2) =
+      if elapsed1 >= eman.spawnLapse then
+        let
+          numSpawnNormal = eman.maxNormal - (List.length eman.enemiesNormal)
+          numSpawnHoming = eman.maxHoming - (List.length eman.enemiesHoming)
+          numSpawnRandom = eman.maxRandom - (List.length eman.enemiesRandom)
+          seed1 = eman.seed
+          (newNormals, seed2) = spawnEnemies settings Normal numSpawnNormal seed1
+          (newHomings, seed3) = spawnEnemies settings Homing numSpawnHoming seed2
+          (newRandoms, seed4) = spawnEnemies settings Random numSpawnRandom seed3
+        in
+          ( List.append eman.enemiesNormal newNormals
+          , List.append eman.enemiesHoming newHomings
+          , List.append eman.enemiesRandom newRandoms
+          , seed4
+          , elapsed1 - eman.elapsed
+          )
+      else
+        (eman.enemiesNormal, eman.enemiesHoming, eman.enemiesRandom, eman.seed, elapsed1)
+    enemiesNormal2 = List.map (updateEnemy settings diff) enemiesNormal1
+    enemiesHoming2 = List.map (updateEnemy settings diff) enemiesHoming1
+    enemiesRandom2 = List.map (updateEnemy settings diff) enemiesRandom1
+  in
+    {eman
+      | elapsed = elapsed2
+      , enemiesNormal = enemiesNormal2
+      , enemiesHoming = enemiesHoming2
+      , enemiesRandom = enemiesRandom2
+      , seed = seed1
     }
 
-updatePlayer : Player -> Time -> Player
-updatePlayer ({x, y, speed, tUp, tDown, tLeft, tRight} as player) diff = 
+type EnemyAI
+  = Normal -- starts with random velocity and just bounces around
+  | Homing -- aims towards the player
+  | Random -- same as normal but has some probability to randomly change direction
+
+type alias Enemy =
+  { x : Float
+  , y : Float
+  , radius : Float
+  , dx : Float
+  , dy : Float
+  , ai : EnemyAI
+  , color : Color
+  }
+
+newEnemy : EnemyAI -> Color -> Float -> Float -> Float -> Float -> Enemy
+newEnemy ai color x y speed angle =
+  { x = x
+  , y = y
+  , radius = 30.0
+  , dx = speed * cos angle
+  , dy = speed * sin angle
+  , ai = ai
+  , color = color
+  }
+
+generateEnemy : Settings -> EnemyAI -> Random.Generator Enemy
+generateEnemy settings ai = 
+  let
+    genX = Random.float 0.0 settings.screenWidth
+    genY = Random.float 0.0 settings.screenHeight
+    genSpeed = Random.float 100.0 300.0
+    genAngle = Random.float 0.0 (2.0 * pi)
+  in
+    Random.map4 (newEnemy ai Color.red) genX genY genSpeed genAngle
+
+updateEnemy : Settings -> Time -> Enemy -> Enemy
+updateEnemy {screenWidth, screenHeight} diff ({x, y, radius, dx, dy, ai} as enemy) = 
+  let
+    elapsed = Time.inMilliseconds diff
+    (x1, y1) = case ai of -- TODO implement the other AI behaviors
+      _ ->
+        (x + (elapsed * dx / 1000.0), y + (elapsed * dy / 1000.0))
+    (x2, dx2) = if x1 + radius > screenWidth then (screenWidth-radius, -dx) else if (x1-radius < 0) then (radius,-dx) else (x1,dx)
+    (y2, dy2) = if y1 + radius > screenHeight then (screenHeight-radius, -dy) else if (y1-radius < 0) then (radius,-dy) else (y1,dy)
+    enemy1 = {enemy | x = x2, y = y2, dx=dx2, dy=dy2}
+  in
+    enemy1
+
+initPlayer : Settings -> Player 
+initPlayer {playerRadius, playerColor} =
+  { x=0.0
+  , y=0.0
+  , radius=playerRadius
+  , color=playerColor
+  , speed=300.0
+  , tUp=ThrustOff
+  , tDown=ThrustOff
+  , tLeft=ThrustOff
+  , tRight=ThrustOff
+  }
+
+updatePlayer : Player -> Settings -> Time -> Player
+updatePlayer ({x, y, radius, speed, tUp, tDown, tLeft, tRight} as player) {screenWidth, screenHeight} diff = 
   let
     elapsed = Time.inMilliseconds diff
     dx = (elapsed * speed / 1000.0) * (thrustInd tRight - thrustInd tLeft)
     dy = (elapsed * speed / 1000.0) * (thrustInd tDown - thrustInd tUp)
     x1 = x + dx
     y1 = y + dy
+    (x2, y2) = clampCircleEntity x1 y1 radius screenWidth screenHeight
+    player1 = {player | x = x2, y = y2}
   in
-    {player | x = x1, y = y1}
-
-newModel : Model
-newModel =
-    { fpsCounter = newFPSCounter
-    , player = newPlayer
-    }
-
-initModel : Model
-initModel = newModel
+    player1
 
 init : (Model, Cmd Msg)
 init =
@@ -144,7 +303,7 @@ updateThrust ({player} as model) dir act =
     
 
 update : Msg -> Model -> (Model, Cmd Msg)
-update msg ({player,fpsCounter} as model) =
+update msg ({settings,player,fpsCounter,enemyManager} as model) =
   case msg of
     Noop ->
       (model, Cmd.none)
@@ -153,7 +312,9 @@ update msg ({player,fpsCounter} as model) =
     Step diff ->
       ({model
         | fpsCounter = updateFPSCounter fpsCounter diff
-        , player = updatePlayer player diff},
+        , player = updatePlayer player settings diff
+        , enemyManager = updateEnemyManager enemyManager settings diff
+        },
       Cmd.none)
     
 
@@ -176,7 +337,7 @@ subscriptions model =
         Noop
   in
     Sub.batch
-    [ AnimationFrame.diffs <| Step << clamp minFrameDiff maxFrameDiff
+    [ AnimationFrame.diffs <| Step << clamp model.settings.minFrameDiff model.settings.maxFrameDiff
     , Keyboard.downs <| makeKeyHandler ThrustOn
     , Keyboard.ups <| makeKeyHandler ThrustOff
     ]
@@ -207,6 +368,27 @@ drawPlayer {x,y,radius,color} =
   in    
   Svg.circle [cx, cy, r, fillOpacity, stroke, strokeWidth] []
 
+drawEnemy : Enemy -> Svg Msg
+drawEnemy {x,y,radius,color} = 
+  let
+    cx = SA.cx <| toString x
+    cy = SA.cy <| toString y
+    r = SA.r <| toString radius
+    fillOpacity = SA.fillOpacity "0"
+    stroke = SA.stroke "red"
+    strokeWidth = SA.strokeWidth "5px"
+  in    
+  Svg.circle [cx, cy, r, fillOpacity, stroke, strokeWidth] []
+
+drawEnemies : EnemyManager -> Svg Msg
+drawEnemies {enemiesNormal, enemiesHoming, enemiesRandom} =
+  let
+    drawNormal = List.map drawEnemy enemiesNormal
+    drawHoming = List.map drawEnemy enemiesHoming
+    drawRandom = List.map drawEnemy enemiesRandom
+  in
+    Svg.g [] (List.concat [drawNormal, drawHoming, drawRandom])
+
 viewScene : Model -> Html Msg
 viewScene model = 
     let
@@ -217,8 +399,9 @@ viewScene model =
       viewStr = "0 0 " ++ wStr ++ " " ++ hStr
       bg = Svg.rect [SA.x "0", SA.y "0", SA.width wStr, SA.height hStr, SA.fill "black"]  []
       playerSprite = drawPlayer model.player
+      enemies = drawEnemies model.enemyManager
     in
-      Svg.svg [SA.width wStr, SA.height hStr, SA.viewBox viewStr] [bg, playerSprite]
+      Svg.svg [SA.width wStr, SA.height hStr, SA.viewBox viewStr] [bg, playerSprite, enemies]
 
 view : Model -> Html Msg
 view model =
