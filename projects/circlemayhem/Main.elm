@@ -103,12 +103,8 @@ type alias Player =
 
 type alias EnemyManager =
   { seed : Random.Seed
-  , enemiesNormal : List Enemy
-  , enemiesHoming : List Enemy
-  , enemiesRandom : List Enemy
-  , maxNormal : Int
-  , maxHoming : Int
-  , maxRandom : Int
+  , enemies : List Enemy
+  , maxCount : Int -- maximum number of enemies
   , spawnLapse : Float -- seconds in-between enemy respanws
   , elapsed : Float -- keep track of elapsed time since last respawn
   }
@@ -116,12 +112,8 @@ type alias EnemyManager =
 initEnemyManager : EnemyManager
 initEnemyManager = 
   { seed = Random.initialSeed 0x40e7b36c
-  , enemiesNormal = []
-  , enemiesHoming = []
-  , enemiesRandom = []
-  , maxNormal = 4
-  , maxHoming = 4
-  , maxRandom = 4
+  , enemies = []
+  , maxCount = 20
   , spawnLapse = 5.0
   , elapsed = 5.0
   }
@@ -144,39 +136,38 @@ spawnEnemies settings ai num seed =
   in
     acc num seed []
 
+spawnNewEnemies : Settings -> Random.Seed -> (Random.Seed, List Enemy)
+spawnNewEnemies settings seed =
+  let
+    seed1 = seed
+    (newNormals, seed2) = spawnEnemies settings Normal 4 seed1
+    (newHomings, seed3) = spawnEnemies settings Homing 4 seed2
+    (newRandoms, seed4) = spawnEnemies settings Random 4 seed3
+  in
+    (seed4, List.concat [newNormals, newHomings, newRandoms])
+
 updateEnemyManager : EnemyManager -> Settings -> Time -> EnemyManager
 updateEnemyManager eman settings diff =
   let
     diffSeconds = Time.inSeconds diff
     elapsed1 = eman.elapsed + diffSeconds
-    (enemiesNormal1, enemiesHoming1, enemiesRandom1, seed1, elapsed2) =
+    numEnemies = List.length eman.enemies
+    (enemies1, seed1, elapsed2) =
       if elapsed1 >= eman.spawnLapse then
-        let
-          numSpawnNormal = eman.maxNormal - (List.length eman.enemiesNormal)
-          numSpawnHoming = eman.maxHoming - (List.length eman.enemiesHoming)
-          numSpawnRandom = eman.maxRandom - (List.length eman.enemiesRandom)
-          seed1 = eman.seed
-          (newNormals, seed2) = spawnEnemies settings Normal numSpawnNormal seed1
-          (newHomings, seed3) = spawnEnemies settings Homing numSpawnHoming seed2
-          (newRandoms, seed4) = spawnEnemies settings Random numSpawnRandom seed3
-        in
-          ( List.append eman.enemiesNormal newNormals
-          , List.append eman.enemiesHoming newHomings
-          , List.append eman.enemiesRandom newRandoms
-          , seed4
-          , elapsed1 - eman.elapsed
-          )
+        if numEnemies < eman.maxCount then
+          let
+            (seed1, enemies1) = spawnNewEnemies settings eman.seed
+          in
+            (eman.enemies ++ enemies1, seed1, elapsed1 - eman.spawnLapse)
+        else
+          (eman.enemies, eman.seed, elapsed1 - eman.spawnLapse)
       else
-        (eman.enemiesNormal, eman.enemiesHoming, eman.enemiesRandom, eman.seed, elapsed1)
-    enemiesNormal2 = List.map (updateEnemy settings diff) enemiesNormal1
-    enemiesHoming2 = List.map (updateEnemy settings diff) enemiesHoming1
-    enemiesRandom2 = List.map (updateEnemy settings diff) enemiesRandom1
+        (eman.enemies, eman.seed, elapsed1)
+    enemies2 = List.map (updateEnemy settings diff) enemies1
   in
     {eman
       | elapsed = elapsed2
-      , enemiesNormal = enemiesNormal2
-      , enemiesHoming = enemiesHoming2
-      , enemiesRandom = enemiesRandom2
+      , enemies = enemies2
       , seed = seed1
     }
 
@@ -192,18 +183,16 @@ type alias Enemy =
   , dx : Float
   , dy : Float
   , ai : EnemyAI
-  , color : Color
   }
 
-newEnemy : EnemyAI -> Color -> Float -> Float -> Float -> Float -> Enemy
-newEnemy ai color x y speed angle =
+newEnemy : EnemyAI -> Float -> Float -> Float -> Float -> Enemy
+newEnemy ai x y speed angle =
   { x = x
   , y = y
   , radius = 30.0
   , dx = speed * cos angle
   , dy = speed * sin angle
   , ai = ai
-  , color = color
   }
 
 generateEnemy : Settings -> EnemyAI -> Random.Generator Enemy
@@ -214,7 +203,7 @@ generateEnemy settings ai =
     genSpeed = Random.float 100.0 300.0
     genAngle = Random.float 0.0 (2.0 * pi)
   in
-    Random.map4 (newEnemy ai Color.red) genX genY genSpeed genAngle
+    Random.map4 (newEnemy ai) genX genY genSpeed genAngle
 
 updateEnemy : Settings -> Time -> Enemy -> Enemy
 updateEnemy {screenWidth, screenHeight} diff ({x, y, radius, dx, dy, ai} as enemy) = 
@@ -369,25 +358,27 @@ drawPlayer {x,y,radius,color} =
   Svg.circle [cx, cy, r, fillOpacity, stroke, strokeWidth] []
 
 drawEnemy : Enemy -> Svg Msg
-drawEnemy {x,y,radius,color} = 
+drawEnemy {x,y,ai,radius} = 
   let
     cx = SA.cx <| toString x
     cy = SA.cy <| toString y
     r = SA.r <| toString radius
     fillOpacity = SA.fillOpacity "0"
-    stroke = SA.stroke "red"
+    stroke = 
+      case ai of
+        Normal ->
+          SA.stroke "red"
+        Homing ->
+          SA.stroke "magenta"
+        Random ->
+          SA.stroke "orange"
     strokeWidth = SA.strokeWidth "5px"
   in    
   Svg.circle [cx, cy, r, fillOpacity, stroke, strokeWidth] []
 
 drawEnemies : EnemyManager -> Svg Msg
-drawEnemies {enemiesNormal, enemiesHoming, enemiesRandom} =
-  let
-    drawNormal = List.map drawEnemy enemiesNormal
-    drawHoming = List.map drawEnemy enemiesHoming
-    drawRandom = List.map drawEnemy enemiesRandom
-  in
-    Svg.g [] (List.concat [drawNormal, drawHoming, drawRandom])
+drawEnemies {enemies} =
+  Svg.g [] (List.concat [List.map drawEnemy enemies])
 
 viewScene : Model -> Html Msg
 viewScene model = 

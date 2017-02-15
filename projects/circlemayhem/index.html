@@ -9580,7 +9580,17 @@ var _elm_lang$svg$Svg_Attributes$accentHeight = _elm_lang$virtual_dom$VirtualDom
 var _user$project$Main$drawEnemy = function (_p0) {
 	var _p1 = _p0;
 	var strokeWidth = _elm_lang$svg$Svg_Attributes$strokeWidth('5px');
-	var stroke = _elm_lang$svg$Svg_Attributes$stroke('red');
+	var stroke = function () {
+		var _p2 = _p1.ai;
+		switch (_p2.ctor) {
+			case 'Normal':
+				return _elm_lang$svg$Svg_Attributes$stroke('red');
+			case 'Homing':
+				return _elm_lang$svg$Svg_Attributes$stroke('magenta');
+			default:
+				return _elm_lang$svg$Svg_Attributes$stroke('orange');
+		}
+	}();
 	var fillOpacity = _elm_lang$svg$Svg_Attributes$fillOpacity('0');
 	var r = _elm_lang$svg$Svg_Attributes$r(
 		_elm_lang$core$Basics$toString(_p1.radius));
@@ -9617,40 +9627,29 @@ var _user$project$Main$drawEnemy = function (_p0) {
 		},
 		{ctor: '[]'});
 };
-var _user$project$Main$drawEnemies = function (_p2) {
-	var _p3 = _p2;
-	var drawRandom = A2(_elm_lang$core$List$map, _user$project$Main$drawEnemy, _p3.enemiesRandom);
-	var drawHoming = A2(_elm_lang$core$List$map, _user$project$Main$drawEnemy, _p3.enemiesHoming);
-	var drawNormal = A2(_elm_lang$core$List$map, _user$project$Main$drawEnemy, _p3.enemiesNormal);
+var _user$project$Main$drawEnemies = function (_p3) {
+	var _p4 = _p3;
 	return A2(
 		_elm_lang$svg$Svg$g,
 		{ctor: '[]'},
 		_elm_lang$core$List$concat(
 			{
 				ctor: '::',
-				_0: drawNormal,
-				_1: {
-					ctor: '::',
-					_0: drawHoming,
-					_1: {
-						ctor: '::',
-						_0: drawRandom,
-						_1: {ctor: '[]'}
-					}
-				}
+				_0: A2(_elm_lang$core$List$map, _user$project$Main$drawEnemy, _p4.enemies),
+				_1: {ctor: '[]'}
 			}));
 };
-var _user$project$Main$drawPlayer = function (_p4) {
-	var _p5 = _p4;
+var _user$project$Main$drawPlayer = function (_p5) {
+	var _p6 = _p5;
 	var strokeWidth = _elm_lang$svg$Svg_Attributes$strokeWidth('5px');
 	var stroke = _elm_lang$svg$Svg_Attributes$stroke('blue');
 	var fillOpacity = _elm_lang$svg$Svg_Attributes$fillOpacity('0');
 	var r = _elm_lang$svg$Svg_Attributes$r(
-		_elm_lang$core$Basics$toString(_p5.radius));
+		_elm_lang$core$Basics$toString(_p6.radius));
 	var cy = _elm_lang$svg$Svg_Attributes$cy(
-		_elm_lang$core$Basics$toString(_p5.y));
+		_elm_lang$core$Basics$toString(_p6.y));
 	var cx = _elm_lang$svg$Svg_Attributes$cx(
-		_elm_lang$core$Basics$toString(_p5.x));
+		_elm_lang$core$Basics$toString(_p6.x));
 	return A2(
 		_elm_lang$svg$Svg$circle,
 		{
@@ -9748,79 +9747,78 @@ var _user$project$Main$viewScene = function (model) {
 		});
 };
 var _user$project$Main$updateThrust = F3(
-	function (_p6, dir, act) {
-		var _p7 = _p6;
-		var _p9 = _p7.player;
+	function (_p7, dir, act) {
+		var _p8 = _p7;
+		var _p10 = _p8.player;
 		var player1 = function () {
-			var _p8 = dir;
-			switch (_p8.ctor) {
+			var _p9 = dir;
+			switch (_p9.ctor) {
 				case 'ThrustUp':
 					return _elm_lang$core$Native_Utils.update(
-						_p9,
+						_p10,
 						{tUp: act});
 				case 'ThrustDown':
 					return _elm_lang$core$Native_Utils.update(
-						_p9,
+						_p10,
 						{tDown: act});
 				case 'ThrustLeft':
 					return _elm_lang$core$Native_Utils.update(
-						_p9,
+						_p10,
 						{tLeft: act});
 				default:
 					return _elm_lang$core$Native_Utils.update(
-						_p9,
+						_p10,
 						{tRight: act});
 			}
 		}();
 		return _elm_lang$core$Native_Utils.update(
-			_p7,
+			_p8,
 			{player: player1});
 	});
 var _user$project$Main$thrustInd = function (t) {
-	var _p10 = t;
-	if (_p10.ctor === 'ThrustOn') {
+	var _p11 = t;
+	if (_p11.ctor === 'ThrustOn') {
 		return 1.0;
 	} else {
 		return 0.0;
 	}
 };
 var _user$project$Main$updateEnemy = F3(
-	function (_p12, diff, _p11) {
-		var _p13 = _p12;
-		var _p23 = _p13.screenWidth;
-		var _p22 = _p13.screenHeight;
-		var _p14 = _p11;
-		var _p21 = _p14.radius;
-		var _p20 = _p14.dy;
-		var _p19 = _p14.dx;
+	function (_p13, diff, _p12) {
+		var _p14 = _p13;
+		var _p24 = _p14.screenWidth;
+		var _p23 = _p14.screenHeight;
+		var _p15 = _p12;
+		var _p22 = _p15.radius;
+		var _p21 = _p15.dy;
+		var _p20 = _p15.dx;
 		var elapsed = _elm_lang$core$Time$inMilliseconds(diff);
-		var _p15 = function () {
-			var _p16 = _p14.ai;
-			return {ctor: '_Tuple2', _0: _p14.x + ((elapsed * _p19) / 1000.0), _1: _p14.y + ((elapsed * _p20) / 1000.0)};
+		var _p16 = function () {
+			var _p17 = _p15.ai;
+			return {ctor: '_Tuple2', _0: _p15.x + ((elapsed * _p20) / 1000.0), _1: _p15.y + ((elapsed * _p21) / 1000.0)};
 		}();
-		var x1 = _p15._0;
-		var y1 = _p15._1;
-		var _p17 = (_elm_lang$core$Native_Utils.cmp(x1 + _p21, _p23) > 0) ? {ctor: '_Tuple2', _0: _p23 - _p21, _1: 0 - _p19} : ((_elm_lang$core$Native_Utils.cmp(x1 - _p21, 0) < 0) ? {ctor: '_Tuple2', _0: _p21, _1: 0 - _p19} : {ctor: '_Tuple2', _0: x1, _1: _p19});
-		var x2 = _p17._0;
-		var dx2 = _p17._1;
-		var _p18 = (_elm_lang$core$Native_Utils.cmp(y1 + _p21, _p22) > 0) ? {ctor: '_Tuple2', _0: _p22 - _p21, _1: 0 - _p20} : ((_elm_lang$core$Native_Utils.cmp(y1 - _p21, 0) < 0) ? {ctor: '_Tuple2', _0: _p21, _1: 0 - _p20} : {ctor: '_Tuple2', _0: y1, _1: _p20});
-		var y2 = _p18._0;
-		var dy2 = _p18._1;
+		var x1 = _p16._0;
+		var y1 = _p16._1;
+		var _p18 = (_elm_lang$core$Native_Utils.cmp(x1 + _p22, _p24) > 0) ? {ctor: '_Tuple2', _0: _p24 - _p22, _1: 0 - _p20} : ((_elm_lang$core$Native_Utils.cmp(x1 - _p22, 0) < 0) ? {ctor: '_Tuple2', _0: _p22, _1: 0 - _p20} : {ctor: '_Tuple2', _0: x1, _1: _p20});
+		var x2 = _p18._0;
+		var dx2 = _p18._1;
+		var _p19 = (_elm_lang$core$Native_Utils.cmp(y1 + _p22, _p23) > 0) ? {ctor: '_Tuple2', _0: _p23 - _p22, _1: 0 - _p21} : ((_elm_lang$core$Native_Utils.cmp(y1 - _p22, 0) < 0) ? {ctor: '_Tuple2', _0: _p22, _1: 0 - _p21} : {ctor: '_Tuple2', _0: y1, _1: _p21});
+		var y2 = _p19._0;
+		var dy2 = _p19._1;
 		var enemy1 = _elm_lang$core$Native_Utils.update(
-			_p14,
+			_p15,
 			{x: x2, y: y2, dx: dx2, dy: dy2});
 		return enemy1;
 	});
-var _user$project$Main$newEnemy = F6(
-	function (ai, color, x, y, speed, angle) {
+var _user$project$Main$newEnemy = F5(
+	function (ai, x, y, speed, angle) {
 		return {
 			x: x,
 			y: y,
 			radius: 30.0,
 			dx: speed * _elm_lang$core$Basics$cos(angle),
 			dy: speed * _elm_lang$core$Basics$sin(angle),
-			ai: ai,
-			color: color
+			ai: ai
 		};
 	});
 var _user$project$Main$generateEnemy = F2(
@@ -9831,7 +9829,7 @@ var _user$project$Main$generateEnemy = F2(
 		var genX = A2(_elm_lang$core$Random$float, 0.0, settings.screenWidth);
 		return A5(
 			_elm_lang$core$Random$map4,
-			A2(_user$project$Main$newEnemy, ai, _elm_lang$core$Color$red),
+			_user$project$Main$newEnemy(ai),
 			genX,
 			genY,
 			genSpeed,
@@ -9851,15 +9849,15 @@ var _user$project$Main$spawnEnemies = F4(
 				acc:
 				while (true) {
 					if (_elm_lang$core$Native_Utils.cmp(n, 0) > 0) {
-						var _p24 = A3(_user$project$Main$spawnEnemy, settings, ai, s);
-						var newE = _p24._0;
-						var newS = _p24._1;
-						var _v9 = n - 1,
-							_v10 = newS,
-							_v11 = {ctor: '::', _0: newE, _1: out};
-						n = _v9;
-						s = _v10;
-						out = _v11;
+						var _p25 = A3(_user$project$Main$spawnEnemy, settings, ai, s);
+						var newE = _p25._0;
+						var newS = _p25._1;
+						var _v10 = n - 1,
+							_v11 = newS,
+							_v12 = {ctor: '::', _0: newE, _1: out};
+						n = _v10;
+						s = _v11;
+						out = _v12;
 						continue acc;
 					} else {
 						return {ctor: '_Tuple2', _0: out, _1: s};
@@ -9874,12 +9872,8 @@ var _user$project$Main$spawnEnemies = F4(
 	});
 var _user$project$Main$initEnemyManager = {
 	seed: _elm_lang$core$Random$initialSeed(1088926572),
-	enemiesNormal: {ctor: '[]'},
-	enemiesHoming: {ctor: '[]'},
-	enemiesRandom: {ctor: '[]'},
-	maxNormal: 4,
-	maxHoming: 4,
-	maxRandom: 4,
+	enemies: {ctor: '[]'},
+	maxCount: 20,
 	spawnLapse: 5.0,
 	elapsed: 5.0
 };
@@ -9890,35 +9884,35 @@ var _user$project$Main$clampCircleEntity = F5(
 		return {ctor: '_Tuple2', _0: x1, _1: y1};
 	});
 var _user$project$Main$updatePlayer = F3(
-	function (_p26, _p25, diff) {
-		var _p27 = _p26;
-		var _p30 = _p27.speed;
-		var _p28 = _p25;
+	function (_p27, _p26, diff) {
+		var _p28 = _p27;
+		var _p31 = _p28.speed;
+		var _p29 = _p26;
 		var elapsed = _elm_lang$core$Time$inMilliseconds(diff);
-		var dx = ((elapsed * _p30) / 1000.0) * (_user$project$Main$thrustInd(_p27.tRight) - _user$project$Main$thrustInd(_p27.tLeft));
-		var x1 = _p27.x + dx;
-		var dy = ((elapsed * _p30) / 1000.0) * (_user$project$Main$thrustInd(_p27.tDown) - _user$project$Main$thrustInd(_p27.tUp));
-		var y1 = _p27.y + dy;
-		var _p29 = A5(_user$project$Main$clampCircleEntity, x1, y1, _p27.radius, _p28.screenWidth, _p28.screenHeight);
-		var x2 = _p29._0;
-		var y2 = _p29._1;
+		var dx = ((elapsed * _p31) / 1000.0) * (_user$project$Main$thrustInd(_p28.tRight) - _user$project$Main$thrustInd(_p28.tLeft));
+		var x1 = _p28.x + dx;
+		var dy = ((elapsed * _p31) / 1000.0) * (_user$project$Main$thrustInd(_p28.tDown) - _user$project$Main$thrustInd(_p28.tUp));
+		var y1 = _p28.y + dy;
+		var _p30 = A5(_user$project$Main$clampCircleEntity, x1, y1, _p28.radius, _p29.screenWidth, _p29.screenHeight);
+		var x2 = _p30._0;
+		var y2 = _p30._1;
 		var player1 = _elm_lang$core$Native_Utils.update(
-			_p27,
+			_p28,
 			{x: x2, y: y2});
 		return player1;
 	});
 var _user$project$Main$updateFPSCounter = F2(
-	function (_p31, diff) {
-		var _p32 = _p31;
+	function (_p32, diff) {
+		var _p33 = _p32;
 		var decay = 0.97;
-		var frameTime2 = (_p32.frameTime * decay) + ((1.0 - decay) * diff);
+		var frameTime2 = (_p33.frameTime * decay) + ((1.0 - decay) * diff);
 		return _elm_lang$core$Native_Utils.update(
-			_p32,
+			_p33,
 			{frameTime: frameTime2});
 	});
-var _user$project$Main$getFPS = function (_p33) {
-	var _p34 = _p33;
-	return 1000.0 / _p34.frameTime;
+var _user$project$Main$getFPS = function (_p34) {
+	var _p35 = _p34;
+	return 1000.0 / _p35.frameTime;
 };
 var _user$project$Main$viewFPS = function (counter) {
 	var fps = _user$project$Main$getFPS(counter);
@@ -9996,94 +9990,108 @@ var _user$project$Main$Player = F9(
 	function (a, b, c, d, e, f, g, h, i) {
 		return {x: a, y: b, radius: c, color: d, speed: e, tUp: f, tDown: g, tLeft: h, tRight: i};
 	});
-var _user$project$Main$EnemyManager = F9(
-	function (a, b, c, d, e, f, g, h, i) {
-		return {seed: a, enemiesNormal: b, enemiesHoming: c, enemiesRandom: d, maxNormal: e, maxHoming: f, maxRandom: g, spawnLapse: h, elapsed: i};
+var _user$project$Main$EnemyManager = F5(
+	function (a, b, c, d, e) {
+		return {seed: a, enemies: b, maxCount: c, spawnLapse: d, elapsed: e};
 	});
-var _user$project$Main$Enemy = F7(
-	function (a, b, c, d, e, f, g) {
-		return {x: a, y: b, radius: c, dx: d, dy: e, ai: f, color: g};
+var _user$project$Main$Enemy = F6(
+	function (a, b, c, d, e, f) {
+		return {x: a, y: b, radius: c, dx: d, dy: e, ai: f};
 	});
 var _user$project$Main$Random = {ctor: 'Random'};
 var _user$project$Main$Homing = {ctor: 'Homing'};
 var _user$project$Main$Normal = {ctor: 'Normal'};
+var _user$project$Main$spawnNewEnemies = F2(
+	function (settings, seed) {
+		var seed1 = seed;
+		var _p36 = A4(_user$project$Main$spawnEnemies, settings, _user$project$Main$Normal, 4, seed1);
+		var newNormals = _p36._0;
+		var seed2 = _p36._1;
+		var _p37 = A4(_user$project$Main$spawnEnemies, settings, _user$project$Main$Homing, 4, seed2);
+		var newHomings = _p37._0;
+		var seed3 = _p37._1;
+		var _p38 = A4(_user$project$Main$spawnEnemies, settings, _user$project$Main$Random, 4, seed3);
+		var newRandoms = _p38._0;
+		var seed4 = _p38._1;
+		return {
+			ctor: '_Tuple2',
+			_0: seed4,
+			_1: _elm_lang$core$List$concat(
+				{
+					ctor: '::',
+					_0: newNormals,
+					_1: {
+						ctor: '::',
+						_0: newHomings,
+						_1: {
+							ctor: '::',
+							_0: newRandoms,
+							_1: {ctor: '[]'}
+						}
+					}
+				})
+		};
+	});
 var _user$project$Main$updateEnemyManager = F3(
 	function (eman, settings, diff) {
+		var numEnemies = _elm_lang$core$List$length(eman.enemies);
 		var diffSeconds = _elm_lang$core$Time$inSeconds(diff);
 		var elapsed1 = eman.elapsed + diffSeconds;
-		var _p35 = function () {
+		var _p39 = function () {
 			if (_elm_lang$core$Native_Utils.cmp(elapsed1, eman.spawnLapse) > -1) {
-				var seed1 = eman.seed;
-				var numSpawnRandom = eman.maxRandom - _elm_lang$core$List$length(eman.enemiesRandom);
-				var numSpawnHoming = eman.maxHoming - _elm_lang$core$List$length(eman.enemiesHoming);
-				var numSpawnNormal = eman.maxNormal - _elm_lang$core$List$length(eman.enemiesNormal);
-				var _p36 = A4(_user$project$Main$spawnEnemies, settings, _user$project$Main$Normal, numSpawnNormal, seed1);
-				var newNormals = _p36._0;
-				var seed2 = _p36._1;
-				var _p37 = A4(_user$project$Main$spawnEnemies, settings, _user$project$Main$Homing, numSpawnHoming, seed2);
-				var newHomings = _p37._0;
-				var seed3 = _p37._1;
-				var _p38 = A4(_user$project$Main$spawnEnemies, settings, _user$project$Main$Random, numSpawnRandom, seed3);
-				var newRandoms = _p38._0;
-				var seed4 = _p38._1;
-				return {
-					ctor: '_Tuple5',
-					_0: A2(_elm_lang$core$List$append, eman.enemiesNormal, newNormals),
-					_1: A2(_elm_lang$core$List$append, eman.enemiesHoming, newHomings),
-					_2: A2(_elm_lang$core$List$append, eman.enemiesRandom, newRandoms),
-					_3: seed4,
-					_4: elapsed1 - eman.elapsed
-				};
+				if (_elm_lang$core$Native_Utils.cmp(numEnemies, eman.maxCount) < 0) {
+					var _p40 = A2(_user$project$Main$spawnNewEnemies, settings, eman.seed);
+					var seed1 = _p40._0;
+					var enemies1 = _p40._1;
+					return {
+						ctor: '_Tuple3',
+						_0: A2(_elm_lang$core$Basics_ops['++'], eman.enemies, enemies1),
+						_1: seed1,
+						_2: elapsed1 - eman.spawnLapse
+					};
+				} else {
+					return {ctor: '_Tuple3', _0: eman.enemies, _1: eman.seed, _2: elapsed1 - eman.spawnLapse};
+				}
 			} else {
-				return {ctor: '_Tuple5', _0: eman.enemiesNormal, _1: eman.enemiesHoming, _2: eman.enemiesRandom, _3: eman.seed, _4: elapsed1};
+				return {ctor: '_Tuple3', _0: eman.enemies, _1: eman.seed, _2: elapsed1};
 			}
 		}();
-		var enemiesNormal1 = _p35._0;
-		var enemiesHoming1 = _p35._1;
-		var enemiesRandom1 = _p35._2;
-		var seed1 = _p35._3;
-		var elapsed2 = _p35._4;
-		var enemiesNormal2 = A2(
+		var enemies1 = _p39._0;
+		var seed1 = _p39._1;
+		var elapsed2 = _p39._2;
+		var enemies2 = A2(
 			_elm_lang$core$List$map,
 			A2(_user$project$Main$updateEnemy, settings, diff),
-			enemiesNormal1);
-		var enemiesHoming2 = A2(
-			_elm_lang$core$List$map,
-			A2(_user$project$Main$updateEnemy, settings, diff),
-			enemiesHoming1);
-		var enemiesRandom2 = A2(
-			_elm_lang$core$List$map,
-			A2(_user$project$Main$updateEnemy, settings, diff),
-			enemiesRandom1);
+			enemies1);
 		return _elm_lang$core$Native_Utils.update(
 			eman,
-			{elapsed: elapsed2, enemiesNormal: enemiesNormal2, enemiesHoming: enemiesHoming2, enemiesRandom: enemiesRandom2, seed: seed1});
+			{elapsed: elapsed2, enemies: enemies2, seed: seed1});
 	});
 var _user$project$Main$update = F2(
-	function (msg, _p39) {
-		var _p40 = _p39;
-		var _p44 = _p40.settings;
-		var _p43 = _p40;
-		var _p41 = msg;
-		switch (_p41.ctor) {
+	function (msg, _p41) {
+		var _p42 = _p41;
+		var _p46 = _p42.settings;
+		var _p45 = _p42;
+		var _p43 = msg;
+		switch (_p43.ctor) {
 			case 'Noop':
-				return {ctor: '_Tuple2', _0: _p43, _1: _elm_lang$core$Platform_Cmd$none};
+				return {ctor: '_Tuple2', _0: _p45, _1: _elm_lang$core$Platform_Cmd$none};
 			case 'Thrust':
 				return {
 					ctor: '_Tuple2',
-					_0: A3(_user$project$Main$updateThrust, _p43, _p41._0, _p41._1),
+					_0: A3(_user$project$Main$updateThrust, _p45, _p43._0, _p43._1),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			default:
-				var _p42 = _p41._0;
+				var _p44 = _p43._0;
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
-						_p43,
+						_p45,
 						{
-							fpsCounter: A2(_user$project$Main$updateFPSCounter, _p40.fpsCounter, _p42),
-							player: A3(_user$project$Main$updatePlayer, _p40.player, _p44, _p42),
-							enemyManager: A3(_user$project$Main$updateEnemyManager, _p40.enemyManager, _p44, _p42)
+							fpsCounter: A2(_user$project$Main$updateFPSCounter, _p42.fpsCounter, _p44),
+							player: A3(_user$project$Main$updatePlayer, _p42.player, _p46, _p44),
+							enemyManager: A3(_user$project$Main$updateEnemyManager, _p42.enemyManager, _p46, _p44)
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
@@ -10094,9 +10102,9 @@ var _user$project$Main$ThrustLeft = {ctor: 'ThrustLeft'};
 var _user$project$Main$ThrustDown = {ctor: 'ThrustDown'};
 var _user$project$Main$ThrustUp = {ctor: 'ThrustUp'};
 var _user$project$Main$ThrustOff = {ctor: 'ThrustOff'};
-var _user$project$Main$initPlayer = function (_p45) {
-	var _p46 = _p45;
-	return {x: 0.0, y: 0.0, radius: _p46.playerRadius, color: _p46.playerColor, speed: 300.0, tUp: _user$project$Main$ThrustOff, tDown: _user$project$Main$ThrustOff, tLeft: _user$project$Main$ThrustOff, tRight: _user$project$Main$ThrustOff};
+var _user$project$Main$initPlayer = function (_p47) {
+	var _p48 = _p47;
+	return {x: 0.0, y: 0.0, radius: _p48.playerRadius, color: _p48.playerColor, speed: 300.0, tUp: _user$project$Main$ThrustOff, tDown: _user$project$Main$ThrustOff, tLeft: _user$project$Main$ThrustOff, tRight: _user$project$Main$ThrustOff};
 };
 var _user$project$Main$initModel = function () {
 	var settings = _user$project$Main$initSettings;
@@ -10138,9 +10146,9 @@ var _user$project$Main$subscriptions = function (model) {
 		{
 			ctor: '::',
 			_0: _elm_lang$animation_frame$AnimationFrame$diffs(
-				function (_p47) {
+				function (_p49) {
 					return _user$project$Main$Step(
-						A3(_elm_lang$core$Basics$clamp, model.settings.minFrameDiff, model.settings.maxFrameDiff, _p47));
+						A3(_elm_lang$core$Basics$clamp, model.settings.minFrameDiff, model.settings.maxFrameDiff, _p49));
 				}),
 			_1: {
 				ctor: '::',
