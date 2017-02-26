@@ -1,0 +1,17 @@
+===============================================================================
+Design Doc for Circle Mayhem
+===============================================================================
+
+-------------------------------------------------------------------------------
+Enemies
+-------------------------------------------------------------------------------
+
+There are 3 types of enemy circles.
+
+Normal: these have an initial random speed and direction, and bounce around the world.
+
+Homing: these have a fixed speed which is slightly faster than the player, and move towards the player.
+
+Random: these are like Normal most of the time, but randomly change their direction.
+There is some fixed probability every some (TBD) period that they change direction.
+
