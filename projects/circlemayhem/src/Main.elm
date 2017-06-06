@@ -4,6 +4,7 @@ import Html exposing (Html)
 import Svg exposing (Svg, Attribute)
 import Svg.Attributes as SA
 import Time exposing (Time)
+import FPSCounter exposing (FPSCounter)
 import Color exposing (Color)
 import String
 import AnimationFrame
@@ -23,7 +24,6 @@ main =
     , subscriptions = subscriptions
     }
 
-
 -- Global parameters
 
 type alias Model =
@@ -39,7 +39,7 @@ initModel =
     settings = initSettings
   in
   { settings = settings
-  , fpsCounter = initFPSCounter
+  , fpsCounter = FPSCounter.init
   , player = initPlayer settings
   , enemyManager = initEnemyManager
   }
@@ -62,23 +62,6 @@ initSettings =
   , playerRadius = 20.0
   , playerColor = Color.blue
   }
-
-type alias FPSCounter = { frameTime : Float }
-
-initFPSCounter : FPSCounter
-initFPSCounter = {frameTime=1000.0/60.0}
-
-getFPS : FPSCounter -> Float
-getFPS {frameTime} = 1000.0 / frameTime
-
--- use simple exponential decay
-updateFPSCounter : FPSCounter -> Time -> FPSCounter
-updateFPSCounter ({frameTime} as counter) diff =
-    let
-        decay = 0.97
-        frameTime2 = frameTime * decay + (1.0 - decay) * diff
-    in
-    {counter | frameTime = frameTime2}
 
 
 clampCircleEntity : Float -> Float -> Float -> Float -> Float -> (Float, Float)
@@ -300,7 +283,7 @@ update msg ({settings,player,fpsCounter,enemyManager} as model) =
       (updateThrust model dir act, Cmd.none)
     Step diff ->
       ({model
-        | fpsCounter = updateFPSCounter fpsCounter diff
+        | fpsCounter = FPSCounter.update fpsCounter diff
         , player = updatePlayer player settings diff
         , enemyManager = updateEnemyManager enemyManager settings diff
         },
@@ -338,7 +321,7 @@ subscriptions model =
 viewFPS : FPSCounter -> Html Msg
 viewFPS counter =
     let 
-        fps = getFPS counter
+        fps = FPSCounter.fps counter
         n = floor (fps * 10)
         a = toString (n // 10)
         b = String.padLeft 1 '0' <| toString (n % 10) 
