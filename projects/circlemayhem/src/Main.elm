@@ -27,11 +27,11 @@ main =
 -- Global parameters
 
 type alias Model =
-    { settings : Settings
-    , fpsCounter : FPSCounter
-    , player : Player
-    , enemyManager : EnemyManager
-    }
+  { settings : Settings
+  , fpsCounter : FPSCounter
+  , player : Player
+  , enemyManager : EnemyManager
+  }
 
 initModel : Model
 initModel =
@@ -73,16 +73,16 @@ clampCircleEntity x y radius width height =
     (x1, y1)
 
 type alias Player =
-    { x : Float
-    , y : Float
-    , radius : Float
-    , color : Color
-    , speed : Float
-    , tUp : ThrustState
-    , tDown : ThrustState
-    , tLeft : ThrustState
-    , tRight : ThrustState
-    }
+  { x : Float
+  , y : Float
+  , radius : Float
+  , color : Color
+  , speed : Float
+  , tUp : ThrustState
+  , tDown : ThrustState
+  , tLeft : ThrustState
+  , tRight : ThrustState
+  }
 
 type alias EnemyManager =
   { seed : Random.Seed
