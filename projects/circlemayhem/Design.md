@@ -4,11 +4,11 @@
 
 There are 3 types of enemy circles.
 
-Normal: these have an initial random speed and direction, and bounce around the world.
+**Normal:** these have an initial random speed and direction, and bounce around the world.
 
-Homing: these have a fixed speed which is slightly faster than the player, and move towards the player.
+**Homing:** these have a fixed speed which is slightly faster than the player, and move towards the player.
 
-Random: these are like Normal most of the time, but randomly change their direction.
+**Random:** these are like Normal most of the time, but randomly change their direction.
 There is some fixed probability every some (TBD) period that they change direction.
 
 Should these enemies have more than 1 HP? Let's start with no, just 1 HP.
