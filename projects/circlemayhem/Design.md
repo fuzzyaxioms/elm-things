@@ -1,10 +1,6 @@
-===============================================================================
-Design Doc for Circle Mayhem
-===============================================================================
+# Design Doc for Circle Mayhem
 
--------------------------------------------------------------------------------
-Enemies
--------------------------------------------------------------------------------
+## Enemies
 
 There are 3 types of enemy circles.
 
@@ -20,9 +16,7 @@ Should these enemies have more than 1 HP? Let's start with no, just 1 HP.
 How should spawning work?
 Fixed, periodic spawning? Maybe up to some fixed upper limit?
 
--------------------------------------------------------------------------------
-Player
--------------------------------------------------------------------------------
+## Player
 
 The player shoots small circles at some fixed speed.
 
