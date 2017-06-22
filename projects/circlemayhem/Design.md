@@ -1,5 +1,23 @@
 # Design Doc for Circle Mayhem
 
+## Circle Entities
+
+The main theme is that every entity that is drawn in the game is a circle. So enemies are circles, the player is a circle, bullets are circles. Maybe this will be relaxed in the future to other shapes like ovals or rectangles.
+
+The exception to this are UI elements like score and time.
+
+### Visual Representation
+
+Circles can be rings, where the border is some color and the inside is transparent, or filled, or filled and bordered.
+
+Animations may consists of changing radii, or changing border or fill colors. For example, enemies may fade in by changing the opacity of their color.
+
+### Physics
+
+The player circle will be controlled through the keyboard and mouse. The keyboard controls the movement. For now, there will be no momentum, so the player circle only moves on key downs. The mouse controls the aiming of the bullets. Bullets autofire, so the player doesn't need to hold down a mouse button
+
+Enemy circles will have different movement patters. The simplest is a random initial velocity, and then the circle will bounce around the screen.
+
 ## Enemies
 
 There are 3 types of enemy circles.
